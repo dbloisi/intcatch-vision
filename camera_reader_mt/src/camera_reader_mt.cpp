@@ -98,17 +98,18 @@ int main(int argc, char* argv[])
         return EXIT_FAILURE;
     }    
     
-    VideoCapture _cap;     
-    _cap.open(cap_file);
-    
-    if (!_cap.isOpened())  // if not success, exit program
+    //input stream connection
+    cout << "Connecting to the input stream...";
+    cout.flush();
+    VideoCapture _cap;
+    do
     {
-        cout << "Cannot open the video file " << cap_file << endl;
-        return EXIT_FAILURE;
-    }
+        _cap.open(cap_file);
+    
+    } while (!_cap.isOpened());
 
-    cout << "input stream open" << endl;
     cap = &_cap;
+    cout << "[OK]" << endl;
 
     double dWidth = cap->get(CV_CAP_PROP_FRAME_WIDTH); //get the width of frames of the video
     double dHeight = cap->get(CV_CAP_PROP_FRAME_HEIGHT); //get the height of frames of the video
@@ -359,7 +360,7 @@ void off_line() {
             cout.flush();
         }
         
-        if (is_gui && waitKey(10) == 27) //wait for 'esc' key press for 30ms. If 'esc' key is pressed, break loop
+        if (is_gui && waitKey(30) == 27) //wait for 'esc' key press for 30ms. If 'esc' key is pressed, break loop
         {
             cout << "esc key is pressed by user" << endl;
             quit = true;
