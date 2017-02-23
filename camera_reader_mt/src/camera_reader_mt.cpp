@@ -1,0 +1,360 @@
+/*
+ * camera_reader_MT.cpp
+ *
+ * Author: Domenico Daniele Bloisi
+ * email: domenico.bloisi@gmail.com
+ */
+
+#include <iostream>
+#include <string>
+
+#include <thread>
+#include <mutex>
+#include <condition_variable>
+
+#include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+
+#include <chrono>
+
+using namespace cv;
+using namespace std;
+
+std::mutex mu;
+std::condition_variable c_var;
+bool ready = false;
+bool processed = false;
+bool quit = false;
+
+//input data
+VideoCapture *cap;
+bool is_live =false;
+//output data
+bool out_set = false;
+string outvideo_filename = "";
+//gui
+bool is_gui =false;
+
+/**
+*
+* function headers
+*
+**/
+void help();
+void acquisition();
+void on_line();
+void off_line();
+
+/**
+*
+* main function
+*
+**/
+int main(int argc, char* argv[])
+{
+    bool in_set = false;
+	
+    string cap_file = "";
+    
+	
+    //print help information
+    help();
+
+    //check for the input parameter correctness
+    if(argc < 3) {
+        cerr <<"Incorret input list" << endl;
+        cerr <<"exiting..." << endl;
+        return EXIT_FAILURE;
+    }
+    
+    for (int i = 1; i < argc; ++i) {
+        if(strcmp(argv[i], "-in") == 0) {
+            cap_file.assign(argv[++i]);
+            in_set = true;
+        }
+        else if(strcmp(argv[i], "-out") == 0) {
+            outvideo_filename.assign(argv[++i]);
+            out_set = true;
+        }
+        else if(strcmp(argv[i], "-live") == 0) {
+            is_live = true;
+        }
+        else if(strcmp(argv[i], "-gui") == 0) {
+            is_gui = true;
+        }
+        else {
+            //error in reading input parameters
+            cerr <<"Please, check the input parameters." << endl;
+            cerr <<"Exiting..." << endl;
+            return EXIT_FAILURE;
+        }
+    }
+	
+    if(!in_set) {
+        //error in reading input parameters
+        cerr <<"Please, check the input parameters." << endl;
+        cerr <<"Exiting..." << endl;
+        return EXIT_FAILURE;
+    }    
+    
+    VideoCapture _cap;     
+    _cap.open(cap_file);
+    
+    if (!_cap.isOpened())  // if not success, exit program
+    {
+        cout << "Cannot open the video file " << cap_file << endl;
+        return EXIT_FAILURE;
+    }
+
+    cout << "input stream open" << endl;
+    cap = &_cap;
+
+    double dWidth = cap->get(CV_CAP_PROP_FRAME_WIDTH); //get the width of frames of the video
+    double dHeight = cap->get(CV_CAP_PROP_FRAME_HEIGHT); //get the height of frames of the video
+
+    cout << "Frame size: " << dWidth << " x " << dHeight << endl;
+
+    double dFPS = cap->get(CV_CAP_PROP_FPS);
+    
+    
+    if(dFPS != dFPS || dFPS > 30) { //check for nan value
+        dFPS = 25.;
+    }
+
+    cout << "FPS: " << dFPS << endl;
+
+    if(is_gui) {
+        namedWindow("video", CV_WINDOW_AUTOSIZE);
+    }
+
+    if(is_live) {
+        on_line();
+    }
+    else {
+        off_line();
+    }
+
+    if (out_set) {
+        cout << "Finished writing" << endl;
+    }
+
+    return EXIT_SUCCESS;
+}
+
+void acquisition()
+{
+    bool run = true;
+    while(run) {
+        std::unique_lock<std::mutex> lk(mu);
+	c_var.wait(lk, []{return ready;});
+
+	//for(int i = 0; i < 5; ++i) {
+	    bool bSuccess = true;
+	    //std::cout<<"grabbing a frame\n";
+	    bSuccess = cap->grab(); // grab a new frame from video
+
+            if (!bSuccess) //if not success, break loop
+            {
+                cout << "Cannot read a frame from video stream" << endl;
+            }
+      //}
+	    
+        processed = true;
+	    
+        lk.unlock();
+        c_var.notify_one();
+        
+        std:chrono::milliseconds ms(1);
+        std::chrono::duration<double, std::milli> ms3 = ms;
+        std::this_thread::sleep_for(ms3);
+
+        if (quit) {
+            run = false;
+        }
+    }       
+}
+
+void on_line() {
+    
+    cout << "LIVE ACQUISITION" << endl;
+    VideoWriter _outputVideo;
+
+    std::thread t(acquisition);
+
+    Mat frame;     //current frame
+
+
+    if(out_set) {
+        
+        _outputVideo.open(outvideo_filename,
+                     CV_FOURCC('D','I','V','X'),
+                     10,
+                     frame.size(),
+                     true);
+        if (!_outputVideo.isOpened())
+        {
+            cout  << "Could not open the output video for writing: " << outvideo_filename << endl;
+            exit(EXIT_FAILURE);
+        }
+        
+        cout << "OUTPUT DATA will be written to: " << outvideo_filename << endl;		
+    }
+
+
+    bool run = true;
+   
+    while (run)
+    {
+        {
+            std::lock_guard<std::mutex> lk(mu);
+            ready = true;
+        }        
+   
+        c_var.notify_one();
+        
+        {
+            std::unique_lock<std::mutex> lk(mu);
+            c_var.wait(lk, []{return processed;});
+        }        
+
+        cap->retrieve(frame);
+        if (!frame.data)
+        {
+            cout << "Unable to read frame from input stream" << endl;
+            break;
+        }
+        
+        if(is_gui) {
+            //get the frame number and write it on the current frame
+            stringstream ss;
+            rectangle(frame, cv::Point(10, 2), cv::Point(100,20),
+                  cv::Scalar(255,255,255), -1);
+            ss << cap->get(1); //CV_CAP_PROP_POS_FRAMES
+            string frameNumberString = ss.str();
+            putText(frame, frameNumberString.c_str(), cv::Point(15, 15),
+                FONT_HERSHEY_SIMPLEX, 0.5 , cv::Scalar(0,0,0));
+        }
+
+        if(is_gui) {
+            imshow("video", frame); //show the frame in "MyVideo" window
+        }
+        else {
+            cout << ".";
+            cout.flush();
+        }
+
+        if (out_set) {
+            _outputVideo.write(frame);
+        
+            cout << "*";
+            cout.flush();
+        }
+        
+        if (is_gui && waitKey(30) == 27) //wait for 'esc' key press for 30ms. If 'esc' key is pressed, break loop
+        {
+            cout << "esc key is pressed by user" << endl;
+            quit = true;
+            run = false;
+        }
+
+    }
+    t.join();
+}
+
+void off_line() {
+    
+    cout << "SINGLE THREAD ACQUISITION" << endl;
+
+    VideoWriter _outputVideo;
+    
+    Mat frame;     //current frame
+
+    cap->read(frame); // get a new frame from camera
+    if (!frame.data)
+    {
+        cout << "Unable to read frame from input stream" << endl;
+        return;
+    }
+
+    if(out_set) {
+        
+        _outputVideo.open(outvideo_filename,
+                     CV_FOURCC('D','I','V','X'),
+                     10,
+                     frame.size(),
+                     true);
+        if (!_outputVideo.isOpened())
+        {
+            cout  << "Could not open the output video for writing: " << outvideo_filename << endl;
+            exit(EXIT_FAILURE);
+        }
+        
+        cout << "OUTPUT DATA will be written to: " << outvideo_filename << endl;		
+    }
+    
+
+    bool run = true;
+   
+    while (run)
+    {
+        cap->read(frame); // get a new frame from camera
+        if (!frame.data)
+        {
+            cout << "Unable to read frame from input stream" << endl;
+            break;
+        }
+                
+	if(is_gui) {
+            //get the frame number and write it on the current frame
+            stringstream ss;
+            rectangle(frame, cv::Point(10, 2), cv::Point(100,20),
+                  cv::Scalar(255,255,255), -1);
+            ss << cap->get(1); //CV_CAP_PROP_POS_FRAMES
+            string frameNumberString = ss.str();
+            putText(frame, frameNumberString.c_str(), cv::Point(15, 15),
+                FONT_HERSHEY_SIMPLEX, 0.5 , cv::Scalar(0,0,0));
+        }
+
+        if(is_gui) {
+            imshow("video", frame);
+        }
+        else {
+            cout << ".";
+            cout.flush();
+        }
+
+        if (out_set) {
+            _outputVideo.write(frame);
+
+            cout << "*";
+            cout.flush();
+        }
+        
+        if (is_gui && waitKey(30) == 27) //wait for 'esc' key press for 30ms. If 'esc' key is pressed, break loop
+        {
+            cout << "esc key is pressed by user" << endl;
+            quit = true;
+            run = false;
+        }
+
+    }
+}
+
+
+
+void help()
+{
+    cout
+    << "--------------------------------------------------------------------------" << endl
+    << "This program capture images from a camera "  << endl
+    << " showing and storing them."             << endl
+                                                                                    << endl
+    << "Usage:"                                                                     << endl
+    << "./camera_reader_mt -in <video filename> {-out <output video filename> | -gui | -live}"         << endl
+    << "for example: ./camera_reader_mt -in http://10.5.5.9:8080/live/amba.m3u8 -out video.avi" << endl
+    << "or: ./camera_reader_mt -in video.mp4"                                           << endl
+    << "--------------------------------------------------------------------------" << endl
+    << endl;
+}
+
