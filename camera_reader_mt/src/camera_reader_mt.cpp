@@ -378,18 +378,19 @@ void off_line() {
 void help()
 {
     cout
-    << "--------------------------------------------------------------------------"             << endl
+    << endl
+    << "----------------------------------------------------------------------------"           << endl
     << "This program capture images from a camera "                                             << endl
     << "showing and storing them."                                                              << endl
     << endl
     << "Usage:"                                                                                 << endl
-    << "./camera_reader_mt -in <video filename> {-out <output video filename> | -gui | -live}"  << endl
+    << "./camera_reader_mt -in <source> {-out <destination> | -gui | -live}"                    << endl
     << endl
     << "Examples:"                                                                              << endl
     << "  ./camera_reader_mt -in http://10.5.5.9:8080/live/amba.m3u8 -out video.avi"            << endl
     << endl
     << "  ./camera_reader_mt -in video.mp4 -gui"                                                << endl
-    << "--------------------------------------------------------------------------"             << endl
+    << "----------------------------------------------------------------------------"           << endl
     << endl;
 }
 
