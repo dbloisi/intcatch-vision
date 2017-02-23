@@ -114,7 +114,7 @@ int main(int argc, char* argv[])
     double dWidth = cap->get(CV_CAP_PROP_FRAME_WIDTH); //get the width of frames of the video
     double dHeight = cap->get(CV_CAP_PROP_FRAME_HEIGHT); //get the height of frames of the video
 
-    cout << "Frame size: " << dWidth << " x " << dHeight << endl;
+    cout << "Input frame size: " << dWidth << " x " << dHeight << endl;
 
     double dFPS = cap->get(CV_CAP_PROP_FPS);
     
@@ -181,10 +181,10 @@ void on_line() {
 
     std::thread t(acquisition);
 
-    Mat frame;     //current frame
+    Mat frame;
 
     //first acquisition
-    cout << "trying to acquire an initial frame...";
+    cout << "Acquiring initial frame...";
     cout.flush();
     do
     {
@@ -207,12 +207,14 @@ void on_line() {
 
     if(out_set) {
 
-        cout << "opening output video stream" << endl;
         cout << "Output video Filename: " << outvideo_filename << endl;
         cout << "codec (CV_FOURCC id): " << CV_FOURCC('D','I','V','X') << endl;
         cout << "fps: " << 25 << endl;
         cout << "frame size: " << frame.size() << endl;
-        
+
+        cout << "opening output video stream...";
+        cout.flush();
+
         _outputVideo.open(outvideo_filename,
                      CV_FOURCC('D','I','V','X'),
                      25,
@@ -223,13 +225,12 @@ void on_line() {
             cout  << "Could not open the output video for writing: " << outvideo_filename << endl;
             exit(EXIT_FAILURE);
         }
-        
+
+        cout << "[OK]" << endl;        
         cout << "OUTPUT DATA will be written to: " << outvideo_filename << endl;		
     }
 
-
     bool run = true;
-   
     while (run)
     {
         {
@@ -294,9 +295,10 @@ void off_line() {
 
     VideoWriter _outputVideo;
     
-    Mat frame;     //current frame
+    Mat frame;
 
-    cap->read(frame); // get a new frame from camera
+    cap->read(frame);
+
     if (!frame.data)
     {
         cout << "Unable to read frame from input stream" << endl;
@@ -304,10 +306,18 @@ void off_line() {
     }
 
     if(out_set) {
+
+        cout << "Output video Filename: " << outvideo_filename << endl;
+        cout << "codec (CV_FOURCC id): " << CV_FOURCC('D','I','V','X') << endl;
+        cout << "fps: " << 25 << endl;
+        cout << "frame size: " << frame.size() << endl;
+
+        cout << "opening output video stream...";
+        cout.flush();
         
         _outputVideo.open(outvideo_filename,
                      CV_FOURCC('D','I','V','X'),
-                     10,
+                     25,
                      frame.size(),
                      true);
         if (!_outputVideo.isOpened())
@@ -316,12 +326,11 @@ void off_line() {
             exit(EXIT_FAILURE);
         }
         
+        cout << "[OK]" << endl;  
         cout << "OUTPUT DATA will be written to: " << outvideo_filename << endl;		
     }
     
-
     bool run = true;
-   
     while (run)
     {
         cap->read(frame); // get a new frame from camera
@@ -363,24 +372,24 @@ void off_line() {
             quit = true;
             run = false;
         }
-
     }
 }
-
-
 
 void help()
 {
     cout
-    << "--------------------------------------------------------------------------" << endl
-    << "This program capture images from a camera "  << endl
-    << " showing and storing them."             << endl
-                                                                                    << endl
-    << "Usage:"                                                                     << endl
-    << "./camera_reader_mt -in <video filename> {-out <output video filename> | -gui | -live}"         << endl
-    << "for example: ./camera_reader_mt -in http://10.5.5.9:8080/live/amba.m3u8 -out video.avi" << endl
-    << "or: ./camera_reader_mt -in video.mp4"                                           << endl
-    << "--------------------------------------------------------------------------" << endl
+    << "--------------------------------------------------------------------------"             << endl
+    << "This program capture images from a camera "                                             << endl
+    << "showing and storing them."                                                              << endl
+    << endl
+    << "Usage:"                                                                                 << endl
+    << "./camera_reader_mt -in <video filename> {-out <output video filename> | -gui | -live}"  << endl
+    << endl
+    << "Examples:"                                                                              << endl
+    << "  ./camera_reader_mt -in http://10.5.5.9:8080/live/amba.m3u8 -out video.avi"            << endl
+    << endl
+    << "  ./camera_reader_mt -in video.mp4 -gui"                                                << endl
+    << "--------------------------------------------------------------------------"             << endl
     << endl;
 }
 
