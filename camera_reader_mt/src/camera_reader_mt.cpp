@@ -150,18 +150,15 @@ void acquisition()
         std::unique_lock<std::mutex> lk(mu);
 	c_var.wait(lk, []{return ready;});
 
-	//for(int i = 0; i < 5; ++i) {
-	    bool bSuccess = true;
-	    //std::cout<<"grabbing a frame\n";
-	    bSuccess = cap->grab(); // grab a new frame from video
+        //std::cout<<"grabbing a frame\n";
+        bool bSuccess = cap->grab(); // grab a new frame from video
 
-            if (!bSuccess) //if not success, break loop
-            {
-                cout << "Cannot read a frame from video stream" << endl;
-                quit = true;
-            }
-      //}
-	    
+        if (!bSuccess) //if not success, break loop
+        {
+            cout << "Cannot read a frame from video stream" << endl;
+            quit = true;
+        }
+   
         processed = true;
 	    
         lk.unlock();
