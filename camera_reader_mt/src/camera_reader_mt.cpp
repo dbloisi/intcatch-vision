@@ -157,6 +157,7 @@ void acquisition()
             if (!bSuccess) //if not success, break loop
             {
                 cout << "Cannot read a frame from video stream" << endl;
+                quit = true;
             }
       //}
 	    
@@ -165,9 +166,9 @@ void acquisition()
         lk.unlock();
         c_var.notify_one();
         
-        std:chrono::milliseconds ms(1);
-        std::chrono::duration<double, std::milli> ms3 = ms;
-        std::this_thread::sleep_for(ms3);
+        std:chrono::microseconds mc(1);
+        std::chrono::duration<double, std::micro> mc1 = mc;
+        std::this_thread::sleep_for(mc1);
 
         if (quit) {
             run = false;
@@ -184,12 +185,39 @@ void on_line() {
 
     Mat frame;     //current frame
 
+    //first acquisition
+    cout << "trying to acquire an initial frame...";
+    cout.flush();
+    do
+    {
+        {
+            std::lock_guard<std::mutex> lk(mu);
+            ready = true;
+        }        
+
+        c_var.notify_one();
+
+        {
+            std::unique_lock<std::mutex> lk(mu);
+            c_var.wait(lk, []{return processed;});
+        }        
+
+        cap->retrieve(frame);
+    } while (!frame.data);
+
+    cout << "[OK]" << endl;
 
     if(out_set) {
+
+        cout << "opening output video stream" << endl;
+        cout << "Output video Filename: " << outvideo_filename << endl;
+        cout << "codec (CV_FOURCC id): " << CV_FOURCC('D','I','V','X') << endl;
+        cout << "fps: " << 25 << endl;
+        cout << "frame size: " << frame.size() << endl;
         
         _outputVideo.open(outvideo_filename,
                      CV_FOURCC('D','I','V','X'),
-                     10,
+                     25,
                      frame.size(),
                      true);
         if (!_outputVideo.isOpened())
@@ -331,7 +359,7 @@ void off_line() {
             cout.flush();
         }
         
-        if (is_gui && waitKey(30) == 27) //wait for 'esc' key press for 30ms. If 'esc' key is pressed, break loop
+        if (is_gui && waitKey(10) == 27) //wait for 'esc' key press for 30ms. If 'esc' key is pressed, break loop
         {
             cout << "esc key is pressed by user" << endl;
             quit = true;
