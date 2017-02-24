@@ -362,6 +362,11 @@ void off_line() {
 
         cout << "opening output video stream...";
         cout.flush();
+
+        outvideo_filename = get_current_time_and_date();
+        stringstream ss;
+        ss << out_cnt;
+        outvideo_filename.append("_"+ss.str()+".avi");
         
         _outputVideo.open(outvideo_filename,
                      CV_FOURCC('D','I','V','X'),
@@ -373,9 +378,11 @@ void off_line() {
             cout  << "Could not open the output video for writing: " << outvideo_filename << endl;
             exit(EXIT_FAILURE);
         }
-        
-        cout << "[OK]" << endl;  
-        cout << "OUTPUT DATA will be written to: " << outvideo_filename << endl;		
+
+        cout << "[OK]" << endl;        
+        cout << "OUTPUT DATA will be written to: " << outvideo_filename << endl;
+        out_frame_n = 0; 
+        out_cnt++;		
     }
     
     bool run = true;
@@ -410,8 +417,36 @@ void off_line() {
         if (out_set) {
             _outputVideo.write(frame);
 
+            out_frame_n++; 
+        
             cout << "*";
             cout.flush();
+
+            if(MAX_LENGTH > 0 && out_frame_n > MAX_LENGTH) {
+                cout << "opening output video stream...";
+                cout.flush();
+
+                outvideo_filename = get_current_time_and_date();
+                stringstream ss;
+                ss << out_cnt;
+                outvideo_filename.append("_"+ss.str()+".avi");
+        
+                _outputVideo.open(outvideo_filename,
+                     CV_FOURCC('D','I','V','X'),
+                     25,
+                     frame.size(),
+                     true);
+                if (!_outputVideo.isOpened())
+                {
+                    cout  << "Could not open the output video for writing: " << outvideo_filename << endl;
+                    exit(EXIT_FAILURE);
+                }
+
+                cout << "[OK]" << endl;        
+                cout << "OUTPUT DATA will be written to: " << outvideo_filename << endl;
+                out_frame_n = 0; 
+                out_cnt++;
+            }
         }
         
         if (is_gui && waitKey(30) == 27) //wait for 'esc' key press for 30ms. If 'esc' key is pressed, break loop
