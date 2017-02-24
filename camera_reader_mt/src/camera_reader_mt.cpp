@@ -17,6 +17,7 @@
 #include <opencv2/imgproc/imgproc.hpp>
 
 #include <chrono>
+#include <iomanip>
 
 using namespace cv;
 using namespace std;
@@ -33,6 +34,9 @@ bool is_live =false;
 //output data
 bool out_set = false;
 string outvideo_filename = "";
+int MAX_LENGTH = -1;
+int out_cnt = -1;
+int out_frame_n = -1;
 //gui
 bool is_gui =false;
 
@@ -46,6 +50,8 @@ void acquisition();
 void on_line();
 void off_line();
 
+std::string get_current_time_and_date();
+
 /**
 *
 * main function
@@ -53,11 +59,9 @@ void off_line();
 **/
 int main(int argc, char* argv[])
 {
-    bool in_set = false;
-	
+    bool in_set = false;	
     string cap_file = "";
-    
-	
+    	
     //print help information
     help();
 
@@ -74,14 +78,18 @@ int main(int argc, char* argv[])
             in_set = true;
         }
         else if(strcmp(argv[i], "-out") == 0) {
-            outvideo_filename.assign(argv[++i]);
             out_set = true;
+            out_cnt = 0;
         }
         else if(strcmp(argv[i], "-live") == 0) {
             is_live = true;
         }
         else if(strcmp(argv[i], "-gui") == 0) {
             is_gui = true;
+        }
+        else if(strcmp(argv[i], "-n") == 0) {
+            std::istringstream iss(argv[++i]);
+            iss >> MAX_LENGTH;
         }
         else {
             //error in reading input parameters
@@ -96,7 +104,7 @@ int main(int argc, char* argv[])
         cerr <<"Please, check the input parameters." << endl;
         cerr <<"Exiting..." << endl;
         return EXIT_FAILURE;
-    }    
+    }
     
     //input stream connection
     cout << "Connecting to the input stream...";
@@ -104,7 +112,12 @@ int main(int argc, char* argv[])
     VideoCapture _cap;
     do
     {
-        _cap.open(cap_file);
+        if(strcmp(cap_file.c_str(), "0") == 0) {
+            _cap.open(0);
+        }
+        else {
+            _cap.open(cap_file);
+        }
     
     } while (!_cap.isOpened());
 
@@ -215,6 +228,11 @@ void on_line() {
         cout << "opening output video stream...";
         cout.flush();
 
+        outvideo_filename = get_current_time_and_date();
+        stringstream ss;
+        ss << out_cnt;
+        outvideo_filename.append("_"+ss.str()+".avi");
+        
         _outputVideo.open(outvideo_filename,
                      CV_FOURCC('D','I','V','X'),
                      25,
@@ -227,7 +245,9 @@ void on_line() {
         }
 
         cout << "[OK]" << endl;        
-        cout << "OUTPUT DATA will be written to: " << outvideo_filename << endl;		
+        cout << "OUTPUT DATA will be written to: " << outvideo_filename << endl;
+        out_frame_n = 0; 
+        out_cnt++;		
     }
 
     bool run = true;
@@ -273,9 +293,37 @@ void on_line() {
 
         if (out_set) {
             _outputVideo.write(frame);
+
+            out_frame_n++; 
         
             cout << "*";
             cout.flush();
+
+            if(MAX_LENGTH > 0 && out_frame_n > MAX_LENGTH) {
+                cout << "opening output video stream...";
+                cout.flush();
+
+                outvideo_filename = get_current_time_and_date();
+                stringstream ss;
+                ss << out_cnt;
+                outvideo_filename.append("_"+ss.str()+".avi");
+        
+                _outputVideo.open(outvideo_filename,
+                     CV_FOURCC('D','I','V','X'),
+                     25,
+                     frame.size(),
+                     true);
+                if (!_outputVideo.isOpened())
+                {
+                    cout  << "Could not open the output video for writing: " << outvideo_filename << endl;
+                    exit(EXIT_FAILURE);
+                }
+
+                cout << "[OK]" << endl;        
+                cout << "OUTPUT DATA will be written to: " << outvideo_filename << endl;
+                out_frame_n = 0; 
+                out_cnt++;
+            }
         }
         
         if (is_gui && waitKey(30) == 27) //wait for 'esc' key press for 30ms. If 'esc' key is pressed, break loop
@@ -384,13 +432,24 @@ void help()
     << "showing and storing them."                                                              << endl
     << endl
     << "Usage:"                                                                                 << endl
-    << "./camera_reader_mt -in <source> {-out <destination> | -gui | -live}"                    << endl
+    << "./camera_reader_mt -in <source> {-out | -gui | -live | -n <max frames>}"                << endl
     << endl
     << "Examples:"                                                                              << endl
-    << "  ./camera_reader_mt -in http://10.5.5.9:8080/live/amba.m3u8 -out video.avi"            << endl
+    << "  ./camera_reader_mt -in http://10.5.5.9:8080/live/amba.m3u8 -out -live"                << endl
     << endl
     << "  ./camera_reader_mt -in video.mp4 -gui"                                                << endl
     << "----------------------------------------------------------------------------"           << endl
     << endl;
 }
+
+std::string get_current_time_and_date()
+{
+    auto now = std::chrono::system_clock::now();
+    auto in_time_t = std::chrono::system_clock::to_time_t(now);
+
+    std::stringstream ss;
+    ss << std::put_time(std::localtime(&in_time_t), "Y%Y-M%m-D%d-H%H-M%M-S%S");
+    return ss.str();
+}
+
 

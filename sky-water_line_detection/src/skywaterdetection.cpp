@@ -123,8 +123,8 @@ int SkyWaterDetector::getHorizonline() {
 void SkyWaterDetector::acquisition() {
     bool run = true;
     while(run) {
-        std::unique_lock<std::mutex> lk(mu);
-	c_var.wait(lk, []{return ready;});
+        std::unique_lock<std::mutex> lk(SkyWaterDetector::mu);
+	SkyWaterDetector::c_var.wait(lk, []{return SkyWaterDetector::ready;});
 
 	    //for(int i = 0; i < 5; ++i) {
 		    bool bSuccess = true;
@@ -487,26 +487,41 @@ void off_line() {
  * @function on_min_s_trackbar
  * @brief Callback for trackbar on min saturation
  */
-void SkyWaterDetector::on_min_s_trackbar( int, void* )
+void SkyWaterDetector::on_min_s_trackbar(int value, void* userdata)
 {
-    min_saturation = min_saturation_slider;
+    SkyWaterDetector* swd = reinterpret_cast<SkyWaterDetector*>(userdata);
+    swd->on_min_s_trackbar(value);
 }
+
+void SkyWaterDetector::on_min_s_trackbar(int value) {
+    min_saturation = min_saturation_slider;
+} 
 
 /**
  * @function on_max_s_trackbar
  * @brief Callback for trackbar on max saturation
  */
-void SkyWaterDetector::on_max_s_trackbar( int, void* )
+void SkyWaterDetector::on_max_s_trackbar(int value, void* userdata)
 {
-    max_saturation = max_saturation_slider;
+    SkyWaterDetector* swd = reinterpret_cast<SkyWaterDetector*>(userdata);
+    swd->on_max_s_trackbar(value);
 }
+
+void SkyWaterDetector::on_max_s_trackbar(int value) {
+    max_saturation = max_saturation_slider;
+} 
 
 /**
  * @function on_min_b_trackbar
  * @brief Callback for trackbar on min brightness
  */
-void SkyWaterDetector::on_min_b_trackbar( int, void* )
+void SkyWaterDetector::on_min_b_trackbar(int value, void* userdata)
 {
+    SkyWaterDetector* swd = reinterpret_cast<SkyWaterDetector*>(userdata);
+    swd->on_min_b_trackbar(value);
+}
+
+void SkyWaterDetector::on_min_b_trackbar(int value) {
     min_brightness = min_brightness_slider;
 }
 
@@ -514,17 +529,27 @@ void SkyWaterDetector::on_min_b_trackbar( int, void* )
  * @function on_max_b_trackbar
  * @brief Callback for trackbar on max brightness
  */
-void SkyWaterDetector::on_max_b_trackbar( int, void* )
+void SkyWaterDetector::on_max_b_trackbar(int value, void* userdata)
 {
-    max_brightness = max_brightness_slider;
+    SkyWaterDetector* swd = reinterpret_cast<SkyWaterDetector*>(userdata);
+    swd->on_max_b_trackbar(value);
 }
+
+void SkyWaterDetector::on_max_b_trackbar(int value) {
+    max_brightness = max_brightness_slider;
+} 
 
 /**
  * @function on_min_h_trackbar
  * @brief Callback for trackbar on min hue
  */
-void SkyWaterDetector::on_min_h_trackbar( int, void* )
+void SkyWaterDetector::on_min_h_trackbar(int value, void* userdata)
 {
+    SkyWaterDetector* swd = reinterpret_cast<SkyWaterDetector*>(userdata);
+    swd->on_min_h_trackbar(value);
+}
+
+void SkyWaterDetector::on_min_h_trackbar(int value) {
     min_hue = min_hue_slider;
 }
 
@@ -532,10 +557,15 @@ void SkyWaterDetector::on_min_h_trackbar( int, void* )
  * @function on_max_h_trackbar
  * @brief Callback for trackbar on max hue
  */
-void SkyWaterDetector::on_max_h_trackbar( int, void* )
+void SkyWaterDetector::on_max_h_trackbar(int value, void* userdata)
 {
-    max_hue = max_hue_slider;
+    SkyWaterDetector* swd = reinterpret_cast<SkyWaterDetector*>(userdata);
+    swd->on_max_h_trackbar(value);
 }
+
+void SkyWaterDetector::on_max_h_trackbar(int value) {
+    max_hue = max_hue_slider;
+} 
 
 
 Mat SkyWaterDetector::computeMask(const Mat& frame, const Mat& I, const Mat& S) {

@@ -80,9 +80,9 @@ int main(int argc, char* argv[])
         return EXIT_FAILURE;
     }
 
-    SkyWaterDetector d(cap_file, alpha, outvideo_filename, is_live, is_gui);
+    SkyWaterDetector swd(cap_file, alpha, outvideo_filename, is_live, is_gui);
 
-    d.detect();
+    swd.detect();
     
     return EXIT_SUCCESS;
 }

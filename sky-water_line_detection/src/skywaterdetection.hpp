@@ -82,16 +82,22 @@ public:
     int getHorizonline();
  
 private:
-    static void acquisition();
+    void acquisition();
     void on_line();
     void off_line();
 
-    void on_min_b_trackbar( int, void* );
-    void on_max_b_trackbar( int, void* );
-    void on_min_s_trackbar( int, void* );
-    void on_max_s_trackbar( int, void* );
-    void on_min_h_trackbar( int, void* );
-    void on_max_h_trackbar( int, void* );
+    void on_min_b_trackbar(int value);
+    static void on_min_b_trackbar(int value, void* userdata);
+    void on_max_b_trackbar(int value);
+    static void on_max_b_trackbar(int value, void* userdata);
+    void on_min_s_trackbar(int value);
+    static void on_min_s_trackbar(int value, void* userdata);
+    void on_max_s_trackbar(int value);
+    static void on_max_s_trackbar(int value, void* userdata);    
+    void on_min_h_trackbar(int value);
+    static void on_min_h_trackbar(int value, void* userdata);
+    void on_max_h_trackbar(int value);
+    static void on_max_h_trackbar(int value, void* userdata);
 
     Mat computeMask(const Mat& frame, const Mat& I, const Mat& S);
 
