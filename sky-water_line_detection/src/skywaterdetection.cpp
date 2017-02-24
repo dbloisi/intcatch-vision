@@ -9,13 +9,18 @@
 
 SkyWaterDetector::SkyWaterDetector(string cap_file,
                                    float alpha,
+                                   int max_length,
                                    string outvideo_filename,
                                    bool is_live,
                                    bool is_gui)
 {
+
+#if 0
     ready = false;
     processed = false;
     quit = false;
+#endif
+
     this->cap_file.assign(cap_file);
     this->alpha = alpha;
     this->is_live = is_live;
@@ -25,6 +30,14 @@ SkyWaterDetector::SkyWaterDetector(string cap_file,
     else {
         this->outvideo_filename.assign(outvideo_filename);
         out_set = true;
+        if(max_length > 0) {
+            MAX_LENGTH = max_length;
+        }
+        else {
+            MAX_LENGTH = -1;
+            out_cnt = -1;
+            out_frame_n = -1;
+        }
     }
     this->is_gui = is_gui;
 
@@ -105,7 +118,6 @@ SkyWaterDetector::SkyWaterDetector(string cap_file,
 
 }
 
-
 void SkyWaterDetector::detect()
 {
     if(is_live) {
@@ -121,6 +133,9 @@ int SkyWaterDetector::getHorizonline() {
 }
 
 void SkyWaterDetector::acquisition() {
+
+#if 0
+
     bool run = true;
     while(run) {
         std::unique_lock<std::mutex> lk(SkyWaterDetector::mu);
@@ -149,7 +164,10 @@ void SkyWaterDetector::acquisition() {
         if (quit) {
             run = false;
         }
-    }       
+    }
+
+#endif
+       
 }
 
 void SkyWaterDetector::on_line() {
@@ -157,6 +175,7 @@ void SkyWaterDetector::on_line() {
     cout << "LIVE ACQUISITION" << endl;
     VideoWriter _outputVideo;
 
+#if 0
     std::thread t(acquisition);
 
     Mat frame;     //current frame
@@ -227,10 +246,129 @@ void SkyWaterDetector::on_line() {
 
     }
     t.join();
+#endif
 }
 
 
 void SkyWaterDetector::off_line() {
+
+    cout << "SINGLE THREAD ACQUISITION" << endl;
+
+    VideoWriter _outputVideo;
+    
+    Mat frame;
+
+    cap->read(frame);
+
+    if (!frame.data)
+    {
+        cout << "Unable to read frame from input stream" << endl;
+        return;
+    }
+
+    if(out_set) {
+
+        cout << "Output video Filename: " << outvideo_filename << endl;
+        cout << "codec (CV_FOURCC id): " << CV_FOURCC('D','I','V','X') << endl;
+        cout << "fps: " << 25 << endl;
+        cout << "frame size: " << frame.size() << endl;
+
+        cout << "opening output video stream...";
+        cout.flush();
+
+        outvideo_filename = get_current_time_and_date();
+        stringstream ss;
+        ss << out_cnt;
+        outvideo_filename.append("_"+ss.str()+".avi");
+        
+        _outputVideo.open(outvideo_filename,
+                     CV_FOURCC('D','I','V','X'),
+                     25,
+                     frame.size(),
+                     true);
+        if (!_outputVideo.isOpened())
+        {
+            cout  << "Could not open the output video for writing: " << outvideo_filename << endl;
+            exit(EXIT_FAILURE);
+        }
+
+        cout << "[OK]" << endl;        
+        cout << "OUTPUT DATA will be written to: " << outvideo_filename << endl;
+        out_frame_n = 0; 
+        out_cnt++;		
+    }
+    
+    bool run = true;
+    while (run)
+    {
+        cap->read(frame); // get a new frame from camera
+        if (!frame.data)
+        {
+            cout << "Unable to read frame from input stream" << endl;
+            break;
+        }
+                
+	if(is_gui) {
+            //get the frame number and write it on the current frame
+            stringstream ss;
+            rectangle(frame, cv::Point(10, 2), cv::Point(100,20),
+                  cv::Scalar(255,255,255), -1);
+            ss << cap->get(1); //CV_CAP_PROP_POS_FRAMES
+            string frameNumberString = ss.str();
+            putText(frame, frameNumberString.c_str(), cv::Point(15, 15),
+                FONT_HERSHEY_SIMPLEX, 0.5 , cv::Scalar(0,0,0));
+        }
+
+        if(is_gui) {
+            imshow("video", frame);
+        }
+        else {
+            cout << ".";
+            cout.flush();
+        }
+
+        if (out_set) {
+            _outputVideo.write(frame);
+
+            out_frame_n++; 
+        
+            cout << "*";
+            cout.flush();
+
+            if(MAX_LENGTH > 0 && out_frame_n > MAX_LENGTH) {
+                cout << "opening output video stream...";
+                cout.flush();
+
+                outvideo_filename = get_current_time_and_date();
+                stringstream ss;
+                ss << out_cnt;
+                outvideo_filename.append("_"+ss.str()+".avi");
+        
+                _outputVideo.open(outvideo_filename,
+                     CV_FOURCC('D','I','V','X'),
+                     25,
+                     frame.size(),
+                     true);
+                if (!_outputVideo.isOpened())
+                {
+                    cout  << "Could not open the output video for writing: " << outvideo_filename << endl;
+                    exit(EXIT_FAILURE);
+                }
+
+                cout << "[OK]" << endl;        
+                cout << "OUTPUT DATA will be written to: " << outvideo_filename << endl;
+                out_frame_n = 0; 
+                out_cnt++;
+            }
+        }
+        
+        if (is_gui && waitKey(30) == 27) //wait for 'esc' key press for 30ms. If 'esc' key is pressed, break loop
+        {
+            cout << "esc key is pressed by user" << endl;
+            quit = true;
+            run = false;
+        }
+    }
 
 }
 
@@ -582,4 +720,15 @@ Mat SkyWaterDetector::computeMask(const Mat& frame, const Mat& I, const Mat& S) 
     }
     return mask;
 }
+
+std::string SkyWaterDetector::get_current_time_and_date()
+{
+    auto now = std::chrono::system_clock::now();
+    auto in_time_t = std::chrono::system_clock::to_time_t(now);
+
+    std::stringstream ss;
+    ss << std::put_time(std::localtime(&in_time_t), "Y%Y-M%m-D%d-H%H-M%M-S%S");
+    return ss.str();
+}
+
 

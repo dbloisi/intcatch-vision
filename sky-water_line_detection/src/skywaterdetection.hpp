@@ -25,20 +25,26 @@ using namespace std;
 class SkyWaterDetector
 {
 private:
+
+#if 0
     //acquisition
     static std::mutex mu;
     static std::condition_variable c_var;
     static bool ready;
     static bool processed;
     static bool quit;
+#endif
 
     //input data
-    static VideoCapture *cap;
+    VideoCapture *cap;
     bool is_live;
     string cap_file;
     //output data
     bool out_set;
     string outvideo_filename;
+    int MAX_LENGTH;
+    int out_cnt;
+    int out_frame_n;
 
     //gui
     bool is_gui;
@@ -77,7 +83,12 @@ private:
     float alpha;
 
 public:
-    SkyWaterDetector(string cap_file, float alpha, string outvideo_filename, bool is_live, bool is_gui);
+    SkyWaterDetector(string cap_file,
+                     float alpha,
+                     string outvideo_filename,
+                     int max_length,
+                     bool is_live,
+                     bool is_gui);
     void detect();
     int getHorizonline();
  
@@ -100,6 +111,8 @@ private:
     static void on_max_h_trackbar(int value, void* userdata);
 
     Mat computeMask(const Mat& frame, const Mat& I, const Mat& S);
+
+    std::string get_current_time_and_date();
 
 };
 
