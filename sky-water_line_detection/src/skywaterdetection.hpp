@@ -19,6 +19,9 @@
 
 #include <chrono>
 
+#include <iomanip>
+
+
 using namespace cv;
 using namespace std;
 
@@ -26,14 +29,14 @@ class SkyWaterDetector
 {
 private:
 
-#if 0
     //acquisition
-    static std::mutex mu;
-    static std::condition_variable c_var;
-    static bool ready;
-    static bool processed;
-    static bool quit;
-#endif
+    std::mutex mu;
+    std::condition_variable c_var;
+    bool ready;
+    bool processed;
+    bool quit;
+    
+    std::thread acquisitionThread;
 
     //input data
     VideoCapture *cap;
@@ -89,6 +92,7 @@ public:
                      int max_length,
                      bool is_live,
                      bool is_gui);
+
     void detect();
     int getHorizonline();
  

@@ -19,6 +19,6 @@ endif()
 include_directories(${PROJECT_BINARY_DIR})
 
 add_executable (${PROJECT_NAME} src/camera_reader_mt.cpp)
-target_link_libraries (${PROJECT_NAME} ${OpenCV_LIBS} ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries (${PROJECT_NAME} ${OpenCV_LIBS} ${CMAKE_THREAD_LIBS_INIT} -lwiringPi)
 
 

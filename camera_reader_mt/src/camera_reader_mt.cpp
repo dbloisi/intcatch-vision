@@ -19,6 +19,8 @@
 #include <chrono>
 #include <iomanip>
 
+#include <wiringPi.h>
+
 using namespace cv;
 using namespace std;
 
@@ -39,6 +41,8 @@ int out_cnt = -1;
 int out_frame_n = -1;
 //gui
 bool is_gui =false;
+//raspberry pi
+bool using_pi = false;
 
 /**
 *
@@ -91,6 +95,9 @@ int main(int argc, char* argv[])
             std::istringstream iss(argv[++i]);
             iss >> MAX_LENGTH;
         }
+        else if(strcmp(argv[i], "-pi") == 0) {
+            using_pi = true;
+        }
         else {
             //error in reading input parameters
             cerr <<"Please, check the input parameters." << endl;
@@ -101,17 +108,37 @@ int main(int argc, char* argv[])
 	
     if(!in_set) {
         //error in reading input parameters
+        cerr <<"Unable to set input source." << endl;
         cerr <<"Please, check the input parameters." << endl;
         cerr <<"Exiting..." << endl;
         return EXIT_FAILURE;
+    }
+    else if(MAX_LENGTH > 0 && !out_set) {
+        //error in reading input parameters
+        cerr <<"Parameter n set without defining an output source." << endl;
+        cerr <<"Please, check the input parameters." << endl;
+        cerr <<"Exiting..." << endl;
+        return EXIT_FAILURE;
+    }
+
+    if(using_pi) {
+        wiringPiSetup();
+        pinMode(0, OUTPUT);
+        pinMode (3, OUTPUT);
     }
     
     //input stream connection
     cout << "Connecting to the input stream...";
     cout.flush();
     VideoCapture _cap;
-    do
-    {
+    do {
+        if(using_pi) {
+            digitalWrite(0, HIGH);
+            delay(200);
+            digitalWrite(0, LOW);    
+            delay(200);
+        }
+
         if(strcmp(cap_file.c_str(), "0") == 0) {
             _cap.open(0);
         }
@@ -124,6 +151,10 @@ int main(int argc, char* argv[])
     cap = &_cap;
     cout << "[OK]" << endl;
 
+    if(using_pi) {
+        digitalWrite (3, HIGH);
+    }
+   
     double dWidth = cap->get(CV_CAP_PROP_FRAME_WIDTH); //get the width of frames of the video
     double dHeight = cap->get(CV_CAP_PROP_FRAME_HEIGHT); //get the height of frames of the video
 
@@ -294,12 +325,19 @@ void on_line() {
         if (out_set) {
             _outputVideo.write(frame);
 
+            if(using_pi) {
+                digitalWrite(3, HIGH);
+                delay(20);
+                digitalWrite(3, LOW);
+            }
+
             out_frame_n++; 
         
             cout << "*";
             cout.flush();
 
             if(MAX_LENGTH > 0 && out_frame_n > MAX_LENGTH) {
+                cout << endl;
                 cout << "opening output video stream...";
                 cout.flush();
 
@@ -417,12 +455,19 @@ void off_line() {
         if (out_set) {
             _outputVideo.write(frame);
 
+            if(using_pi) {
+                digitalWrite(3, HIGH);
+                delay(20);
+                digitalWrite(3, LOW);
+            }
+
             out_frame_n++; 
         
             cout << "*";
             cout.flush();
 
             if(MAX_LENGTH > 0 && out_frame_n > MAX_LENGTH) {
+                cout << endl;
                 cout << "opening output video stream...";
                 cout.flush();
 
@@ -467,7 +512,7 @@ void help()
     << "showing and storing them."                                                              << endl
     << endl
     << "Usage:"                                                                                 << endl
-    << "./camera_reader_mt -in <source> {-out | -gui | -live | -n <max frames>}"                << endl
+    << "./camera_reader_mt -in <source> {-out | -gui | -live | -n <max frames> | -pi}"                << endl
     << endl
     << "Examples:"                                                                              << endl
     << "  ./camera_reader_mt -in http://10.5.5.9:8080/live/amba.m3u8 -out -live"                << endl

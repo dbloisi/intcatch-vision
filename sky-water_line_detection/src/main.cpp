@@ -38,7 +38,9 @@ int main(int argc, char* argv[])
     float alpha = 0.2f;
 	
     string cap_file = "";
-    string outvideo_filename = ""; 
+    string outvideo_filename = "";
+
+    int max_frames = 1000;
 	
     //print help information
     help();
@@ -65,6 +67,10 @@ int main(int argc, char* argv[])
         else if(strcmp(argv[i], "-gui") == 0) {
             is_gui = true;
         }
+        else if(strcmp(argv[i], "-n") == 0) {
+            istringstream iss(argv[++i]);
+            iss >> max_frames;
+        }
         else {
             //error in reading input parameters
             cerr <<"Please, check the input parameters." << endl;
@@ -80,7 +86,7 @@ int main(int argc, char* argv[])
         return EXIT_FAILURE;
     }
 
-    SkyWaterDetector swd(cap_file, alpha, outvideo_filename, is_live, is_gui);
+    SkyWaterDetector swd(cap_file, alpha, outvideo_filename, max_frames, is_live, is_gui);
 
     swd.detect();
     
@@ -100,7 +106,7 @@ void help()
     << "mounted on a small surface autonomous vessel."                              << endl
                                                                                     << endl
     << "Usage:"                                                                     << endl
-    << "./skywaterdetect -in <source> {-out <destination> | -gui | -live | -alpha <value>}"       << endl
+    << "./skywaterdetect -in <source> {-out <destination> | -gui | -live | -alpha <value> | -n <value>}"       << endl
     << "for example: ./skywaterdetect -in http://10.5.5.9:8080/live/amba.m3u8 -out video.avi -live" << endl
     << "or: ./skywaterdetect -in video.mp4 -gui -alpha 0.4"                         << endl
     << "--------------------------------------------------------------------------" << endl

@@ -9,17 +9,15 @@
 
 SkyWaterDetector::SkyWaterDetector(string cap_file,
                                    float alpha,
-                                   int max_length,
                                    string outvideo_filename,
+                                   int max_length,
                                    bool is_live,
                                    bool is_gui)
 {
 
-#if 0
     ready = false;
     processed = false;
     quit = false;
-#endif
 
     this->cap_file.assign(cap_file);
     this->alpha = alpha;
@@ -134,12 +132,10 @@ int SkyWaterDetector::getHorizonline() {
 
 void SkyWaterDetector::acquisition() {
 
-#if 0
-
     bool run = true;
     while(run) {
-        std::unique_lock<std::mutex> lk(SkyWaterDetector::mu);
-	SkyWaterDetector::c_var.wait(lk, []{return SkyWaterDetector::ready;});
+        std::unique_lock<std::mutex> lk(mu);
+	c_var.wait(lk, []{return ready;});
 
 	    //for(int i = 0; i < 5; ++i) {
 		    bool bSuccess = true;
@@ -165,8 +161,6 @@ void SkyWaterDetector::acquisition() {
             run = false;
         }
     }
-
-#endif
        
 }
 
