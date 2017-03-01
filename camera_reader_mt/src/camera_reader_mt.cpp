@@ -5,7 +5,6 @@
  * email: domenico.bloisi@gmail.com
  */
 
-#include <iostream>
 #include <string>
 
 #include <thread>
@@ -17,7 +16,10 @@
 #include <opencv2/imgproc/imgproc.hpp>
 
 #include <chrono>
+
+#include <iostream>
 #include <iomanip>
+#include <ctime>
 
 #include <wiringPi.h>
 
@@ -527,8 +529,17 @@ std::string get_current_time_and_date()
     auto now = std::chrono::system_clock::now();
     auto in_time_t = std::chrono::system_clock::to_time_t(now);
 
+    char timeformatted[256];
+
+    if(0 < strftime(timeformatted, sizeof(timeformatted), "Y%Y-M%m-D%d-H%H-M%M-S%S",
+          std::localtime(&in_time_t)))
+
+    cout << timeformatted << endl;
+
+
     std::stringstream ss;
-    ss << std::put_time(std::localtime(&in_time_t), "Y%Y-M%m-D%d-H%H-M%M-S%S");
+    //ss << std::put_time(std::localtime(&in_time_t), "Y%Y-M%m-D%d-H%H-M%M-S%S");
+    ss << timeformatted;
     return ss.str();
 }
 
