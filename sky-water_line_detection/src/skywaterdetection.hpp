@@ -72,16 +72,6 @@ private:
     int max_saturation_slider;
     double max_saturation;
 
-    //trackbar min hue
-    const int min_hue_slider_max = 255;
-    int min_hue_slider;
-    double min_hue;
-
-    //trackbar max hue
-    const int max_hue_slider_max = 255;
-    int max_hue_slider;
-    double max_hue;
-
     int horizonline;
     float alpha;
 
@@ -109,11 +99,7 @@ private:
     static void on_min_s_trackbar(int value, void* userdata);
     void on_max_s_trackbar(int value);
     static void on_max_s_trackbar(int value, void* userdata);    
-    void on_min_h_trackbar(int value);
-    static void on_min_h_trackbar(int value, void* userdata);
-    void on_max_h_trackbar(int value);
-    static void on_max_h_trackbar(int value, void* userdata);
-
+    
     Mat computeMask(const Mat& frame, const Mat& I, const Mat& S);
 
     std::string get_current_time_and_date();
