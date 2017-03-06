@@ -18,7 +18,7 @@ endif()
 
 include_directories(${PROJECT_BINARY_DIR})
 
-add_executable (${PROJECT_NAME} src/main.cpp src/skywaterdetection.cpp)
+add_executable (${PROJECT_NAME} src/main.cpp src/skywaterdetection.cpp src/videomanager.cpp)
 target_link_libraries (${PROJECT_NAME} ${OpenCV_LIBS} ${CMAKE_THREAD_LIBS_INIT})
 
 

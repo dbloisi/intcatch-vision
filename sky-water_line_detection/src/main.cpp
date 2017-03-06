@@ -14,6 +14,7 @@
 #include <string>
 
 #include "skywaterdetection.hpp"
+#include "videomanager.h"
 
 using namespace std;
 
@@ -23,6 +24,7 @@ using namespace std;
  *
  **/
 void help();
+void processClips(string dir, float alpha, string outvideo_filename);
 
 /**
  *
@@ -32,6 +34,9 @@ void help();
 int main(int argc, char* argv[])
 {
     bool in_set = false;
+
+    bool dir_set = false;
+
     bool out_set = false;
     bool is_gui = false;
     bool is_live = false;
@@ -39,6 +44,8 @@ int main(int argc, char* argv[])
 	
     string cap_file = "";
     string outvideo_filename = "";
+
+    string dir;
 
     int max_frames = 1000;
 	
@@ -71,6 +78,10 @@ int main(int argc, char* argv[])
             istringstream iss(argv[++i]);
             iss >> max_frames;
         }
+        else if(strcmp(argv[i], "-dir") == 0) {
+            dir.assign(argv[++i]);
+            dir_set = true;
+        }
         else {
             //error in reading input parameters
             cerr <<"Please, check the input parameters." << endl;
@@ -79,16 +90,20 @@ int main(int argc, char* argv[])
         }
     }
 	
-    if(!in_set) {
+    if(!(in_set || dir_set)) {
         //error in reading input parameters
         cerr <<"Please, check the input parameters." << endl;
         cerr <<"Exiting..." << endl;
         return EXIT_FAILURE;
     }
 
-    SkyWaterDetector swd(cap_file, alpha, outvideo_filename, max_frames, is_live, is_gui);
-
-    swd.detect();
+    if(dir_set) {
+        processClips(dir, alpha, outvideo_filename);
+    }
+    else {
+        SkyWaterDetector swd(cap_file, alpha, outvideo_filename, max_frames, is_live, is_gui);
+        swd.detect();
+    }
     
     return EXIT_SUCCESS;
 }
@@ -111,5 +126,40 @@ void help()
     << "or: ./skywaterdetect -in video.mp4 -gui -alpha 0.4"                         << endl
     << "--------------------------------------------------------------------------" << endl
     << endl;
+}
+
+/**
+* @function processClips
+*/
+void processClips(string dir, float alpha, string outvideo_filename) {	
+
+    VideoManager *vm = new VideoManager(dir);
+
+    //read the video file in the directory
+    string s = vm->next(1);
+        
+    string prev_s = s;
+
+    cout << "processing video file: " << s << endl;
+
+    SkyWaterDetector swd(s, alpha, outvideo_filename, -1, false, true);
+    swd.detect();
+
+    bool run = true;
+    while(run) {
+        
+        //read next video
+        s = vm->next(1);
+        
+        if(s.compare(prev_s) == 0) {
+            run = false;
+        }
+        else {
+            prev_s = s;
+            cout << "clip: " << s << endl;
+            SkyWaterDetector swd(s, alpha, outvideo_filename, -1, false, true);
+            swd.detect();
+        }    
+    }	
 }
 

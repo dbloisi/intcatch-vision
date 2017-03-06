@@ -39,17 +39,15 @@ SkyWaterDetector::SkyWaterDetector(string cap_file,
     }
     this->is_gui = is_gui;
 
-    VideoCapture _cap;     
-    _cap.open(cap_file);
+    cap = new VideoCapture(cap_file);
     
-    if (!_cap.isOpened())  // if not success, exit program
+    if (!cap->isOpened())  // if not success, exit program
     {
         cout << "Cannot open the video file " << cap_file << endl;
         exit(EXIT_FAILURE);
     }
 
     cout << "input stream open" << endl;
-    cap = &_cap;
 
     double dWidth = cap->get(CV_CAP_PROP_FRAME_WIDTH); //get the width of frames of the video
     double dHeight = cap->get(CV_CAP_PROP_FRAME_HEIGHT); //get the height of frames of the video
@@ -65,10 +63,10 @@ SkyWaterDetector::SkyWaterDetector(string cap_file,
 
     cout << "FPS: " << dFPS << endl;
 
-    min_saturation_slider = 10;
+    min_saturation_slider = 0;
     max_saturation_slider = 50;
-    min_brightness_slider = 30;
-    max_brightness_slider = 100;
+    min_brightness_slider = 50;
+    max_brightness_slider = 150;
     min_hue_slider = 0;
     max_hue_slider = 255;
 
@@ -76,41 +74,29 @@ SkyWaterDetector::SkyWaterDetector(string cap_file,
 
         namedWindow("video", CV_WINDOW_AUTOSIZE);
 
-        namedWindow("Saturation", CV_WINDOW_AUTOSIZE);
-   
+        namedWindow("Saturation", CV_WINDOW_AUTOSIZE);   
         char min_s_trackbarName[50];
         sprintf( min_s_trackbarName, "min S");
-        createTrackbar( min_s_trackbarName, "Saturation", &min_saturation_slider, min_saturation_slider_max, on_min_s_trackbar );
-        on_min_s_trackbar( min_saturation_slider, 0 );
-
+        createTrackbar( min_s_trackbarName, "Saturation", &min_saturation_slider, min_saturation_slider_max, on_min_s_trackbar, this );
         char max_s_trackbarName[50];
         sprintf( max_s_trackbarName, "max S");
-        createTrackbar( max_s_trackbarName, "Saturation", &max_saturation_slider, max_saturation_slider_max, on_max_s_trackbar );
-        on_max_s_trackbar( max_saturation_slider, 0 );
-
+        createTrackbar( max_s_trackbarName, "Saturation", &max_saturation_slider, max_saturation_slider_max, on_max_s_trackbar, this );
+        
         namedWindow("Brightness", CV_WINDOW_AUTOSIZE);
-    
         char min_b_trackbarName[50];
         sprintf( min_b_trackbarName, "min B");
-        createTrackbar( min_b_trackbarName, "Brightness", &min_brightness_slider, min_brightness_slider_max, on_min_b_trackbar );
-        on_min_b_trackbar( min_brightness_slider, 0 );
-
+        createTrackbar( min_b_trackbarName, "Brightness", &min_brightness_slider, min_brightness_slider_max, on_min_b_trackbar, this );
         char max_b_trackbarName[50];
         sprintf( max_b_trackbarName, "max B");
-        createTrackbar( max_b_trackbarName, "Brightness", &max_brightness_slider, max_brightness_slider_max, on_max_b_trackbar );
-        on_max_b_trackbar( max_brightness_slider, 0 );
+        createTrackbar( max_b_trackbarName, "Brightness", &max_brightness_slider, max_brightness_slider_max, on_max_b_trackbar, this );
 
-        namedWindow("Hue", CV_WINDOW_AUTOSIZE);
-    
+        namedWindow("Hue", CV_WINDOW_AUTOSIZE);    
         char min_h_trackbarName[50];
         sprintf( min_h_trackbarName, "min H");
-        createTrackbar( min_h_trackbarName, "Hue", &min_hue_slider, min_hue_slider_max, on_min_h_trackbar );
-        on_min_h_trackbar( min_hue_slider, 0 );
-    
+        createTrackbar( min_h_trackbarName, "Hue", &min_hue_slider, min_hue_slider_max, on_min_h_trackbar, this );    
         char max_h_trackbarName[50];
         sprintf( max_h_trackbarName, "max H");
-        createTrackbar( max_h_trackbarName, "Hue", &max_hue_slider, max_hue_slider_max, on_max_h_trackbar );
-        on_max_h_trackbar( max_hue_slider, 0 );
+        createTrackbar( max_h_trackbarName, "Hue", &max_hue_slider, max_hue_slider_max, on_max_h_trackbar, this );
     } //is_gui
 
 
@@ -132,12 +118,13 @@ int SkyWaterDetector::getHorizonline() {
 
 void SkyWaterDetector::acquisition() {
 
+#if 0
     bool run = true;
     while(run) {
         std::unique_lock<std::mutex> lk(mu);
 	c_var.wait(lk, []{return ready;});
 
-	    //for(int i = 0; i < 5; ++i) {
+	   
 		    bool bSuccess = true;
 		    //std::cout<<"grabbing a frame\n";
 		    bSuccess = cap->grab(); // grab a new frame from video
@@ -146,7 +133,7 @@ void SkyWaterDetector::acquisition() {
 		    {
 		        cout << "Cannot read a frame from video stream" << endl;
 		    }
-	    //}
+	   
 	    
 	    processed = true;
 	    
@@ -161,6 +148,7 @@ void SkyWaterDetector::acquisition() {
             run = false;
         }
     }
+#endif
        
 }
 
@@ -302,7 +290,136 @@ void SkyWaterDetector::off_line() {
             break;
         }
                 
-	if(is_gui) {
+	Mat I(frame.rows, frame.cols, CV_8UC1);
+        Mat S(frame.rows, frame.cols, CV_8UC1);
+
+        Mat H(frame.rows, frame.cols, CV_8UC1);
+        Mat hsv;
+        cvtColor( frame, hsv, CV_BGR2HSV );
+        
+        for(int i = 0; i < frame.rows; ++i) {
+            for(int j = 0; j < frame.cols; ++j) {
+
+                uchar b = cvRound((frame.at<Vec3b>(i,j)[0] +
+                           frame.at<Vec3b>(i,j)[1] +
+                           frame.at<Vec3b>(i,j)[2] ) / 3.f);
+
+
+                float s = 255.f * (1.f - (std::min(frame.at<Vec3b>(i,j)[0],
+                                         std::min(frame.at<Vec3b>(i,j)[1], frame.at<Vec3b>(i,j)[2]))
+                                     / (float)b));
+
+                if(b >= min_brightness && b <= max_brightness) { 
+                    I.at<uchar>(i,j) = b;
+                }
+                else {
+                    I.at<uchar>(i,j) = 0;
+                }
+                if(s >= min_saturation && s <= max_saturation) { 
+                    S.at<uchar>(i,j) = (uchar)s;
+                }
+                else {
+                    S.at<uchar>(i,j) = 0;
+                }
+
+                uchar h = hsv.at<Vec3b>(i,j)[0];
+                if(h >= min_hue && h <= max_hue) { 
+                    H.at<uchar>(i,j) = h;
+                }
+                else {
+                    H.at<uchar>(i,j) = 0;
+                }
+
+            }
+            
+
+        }
+
+        // Apply the colormap
+        Mat cm_I;
+        applyColorMap(I, cm_I, COLORMAP_HOT);
+        Mat cm_S;
+        applyColorMap(S, cm_S, COLORMAP_HOT);
+        Mat cm_H;
+        applyColorMap(H, cm_H, COLORMAP_HOT);
+
+        Mat mask = computeMask(frame,I,S);
+        Mat mask_gray;
+        cvtColor( mask, mask_gray, CV_BGR2GRAY );
+
+    
+        Mat dst, cdst;
+        Canny(mask_gray, dst, 50, 200, 3);
+        cvtColor(dst, cdst, CV_GRAY2BGR);
+
+        vector<Vec4i> lines;
+        HoughLinesP(dst, lines, 1, CV_PI/180, 150, 150, 30 );
+
+        for( size_t i = 0; i < lines.size(); i++ )
+        {
+            Vec4i l = lines[i];
+            if(abs(l[1] - l[3]) < 20) {
+                //line( cdst, Point(l[0], l[1]), Point(l[2], l[3]), Scalar(0,0,255), 3, CV_AA);
+                int y = (l[1] + l[3]) / 2;
+                //line( cdst, Point(0, y), Point(cdst.cols-1, y), Scalar(255,0,0), 1, CV_AA);
+                int diff = 0;
+                for(int i = y - 30, cnt = 0; i < y - 9; i+=10, ++cnt) {
+                    for(int j = 20; j < cdst.cols - 21; j+=20) {
+                        uchar b_1 = mask.at<Vec3b>(i,j)[0];
+                        uchar g_1 = mask.at<Vec3b>(i,j)[1];
+                        uchar r_1 = mask.at<Vec3b>(i,j)[2];
+                        //circle(cdst, Point(j,i), 3, Scalar(0,255,0));
+
+                        int ii;
+                        switch(cnt) {
+                            case 0:
+                                ii = y+10;
+                                //circle(cdst, Point(j,y+10), 3, Scalar(0,255,255));
+                                break;
+                            case 1:
+                                ii = y+20;
+                                //circle(cdst, Point(j,y+20), 3, Scalar(0,255,255));
+                                break;
+                            case 2:
+                                ii = y+30;
+                                //circle(cdst, Point(j,y+30), 3, Scalar(0,255,255));
+                                break;
+                        }
+                        uchar b_2 = mask.at<Vec3b>(ii,j)[0];
+                        uchar g_2 = mask.at<Vec3b>(ii,j)[1];
+                        uchar r_2 = mask.at<Vec3b>(ii,j)[2];
+                        if(abs(b_1 - b_2) > 20 ||
+                           abs(g_1 - g_2) > 20 ||
+                           abs(r_1 - r_2) > 20)
+                        {
+                            diff++;
+                        }
+
+                    }//for j
+                }//for i
+
+                //cout << "diff: " << diff << endl;
+                if(diff > 30) {
+                    //line( cdst, Point(0, y), Point(cdst.cols-1, y), Scalar(255,0,0), 3, CV_AA);
+
+                    if(horizonline < 0) {
+                        horizonline = y;
+                    }
+                    else {
+                        horizonline = cvRound((alpha * y) + (1.0f - alpha) * horizonline);
+                    }
+
+                    break;
+                }
+            }//if
+
+        }//for
+
+        
+
+        line( frame, Point(0, horizonline), Point(frame.cols-1, horizonline), Scalar(255,0,0), 3, CV_AA);
+
+        if(is_gui) {
             //get the frame number and write it on the current frame
             stringstream ss;
             rectangle(frame, cv::Point(10, 2), cv::Point(100,20),
@@ -311,16 +428,22 @@ void SkyWaterDetector::off_line() {
             string frameNumberString = ss.str();
             putText(frame, frameNumberString.c_str(), cv::Point(15, 15),
                 FONT_HERSHEY_SIMPLEX, 0.5 , cv::Scalar(0,0,0));
-        }
-
-        if(is_gui) {
+        
             imshow("video", frame);
+
+            imshow("Brightness", cm_I); 
+            imshow("Saturation", cm_S);
+
+            imshow("Hue", cm_H);
+        
+            imshow("mask", mask); 
         }
         else {
             cout << ".";
             cout.flush();
         }
-
+        
+        
         if (out_set) {
             _outputVideo.write(frame);
 
