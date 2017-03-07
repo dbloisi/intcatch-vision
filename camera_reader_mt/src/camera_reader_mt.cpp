@@ -58,6 +58,8 @@ void off_line();
 
 std::string get_current_time_and_date();
 
+bool connect(string cap_file);
+
 /**
 *
 * main function
@@ -129,29 +131,7 @@ int main(int argc, char* argv[])
         pinMode (3, OUTPUT);
     }
     
-    //input stream connection
-    cout << "Connecting to the input stream...";
-    cout.flush();
-    VideoCapture _cap;
-    do {
-        if(using_pi) {
-            digitalWrite(0, HIGH);
-            delay(200);
-            digitalWrite(0, LOW);    
-            delay(200);
-        }
-
-        if(strcmp(cap_file.c_str(), "0") == 0) {
-            _cap.open(0);
-        }
-        else {
-            _cap.open(cap_file);
-        }
-    
-    } while (!_cap.isOpened());
-
-    cap = &_cap;
-    cout << "[OK]" << endl;
+    connect(cap_file);
 
     if(using_pi) {
         digitalWrite (3, HIGH);
@@ -176,10 +156,16 @@ int main(int argc, char* argv[])
     }
 
     if(is_live) {
-        on_line();
+        while(true) {
+            on_line();
+            connect(cap_file);
+        }
     }
     else {
-        off_line();
+        while(true) {
+            off_line();
+            connect(cap_file);
+        }
     }
 
     if (out_set) {
@@ -246,8 +232,7 @@ void on_line() {
             c_var.wait(lk, []{return processed;});
         }        
 
-        cap->retrieve(frame);
-    } while (!frame.data);
+    } while (!cap->retrieve(frame));
 
     cout << "[OK]" << endl;
 
@@ -298,8 +283,8 @@ void on_line() {
             c_var.wait(lk, []{return processed;});
         }        
 
-        cap->retrieve(frame);
-        if (!frame.data)
+        
+        if (!cap->retrieve(frame))
         {
             cout << "Unable to read frame from input stream" << endl;
             break;
@@ -329,7 +314,7 @@ void on_line() {
 
             if(using_pi) {
                 digitalWrite(3, HIGH);
-                delay(20);
+                delay(200);
                 digitalWrite(3, LOW);
             }
 
@@ -385,9 +370,7 @@ void off_line() {
     
     Mat frame;
 
-    cap->read(frame);
-
-    if (!frame.data)
+    if (!cap->read(frame))
     {
         cout << "Unable to read frame from input stream" << endl;
         return;
@@ -428,10 +411,10 @@ void off_line() {
     bool run = true;
     while (run)
     {
-        cap->read(frame); // get a new frame from camera
-        if (!frame.data)
+        if (!cap->read(frame))
         {
             cout << "Unable to read frame from input stream" << endl;
+
             break;
         }
                 
@@ -459,7 +442,7 @@ void off_line() {
 
             if(using_pi) {
                 digitalWrite(3, HIGH);
-                delay(20);
+                delay(200);
                 digitalWrite(3, LOW);
             }
 
@@ -514,7 +497,7 @@ void help()
     << "showing and storing them."                                                              << endl
     << endl
     << "Usage:"                                                                                 << endl
-    << "./camera_reader_mt -in <source> {-out | -gui | -live | -n <max frames> | -pi}"                << endl
+    << "./camera_reader_mt -in <source> {-out | -gui | -live | -n <max frames> | -pi}"          << endl
     << endl
     << "Examples:"                                                                              << endl
     << "  ./camera_reader_mt -in http://10.5.5.9:8080/live/amba.m3u8 -out -live"                << endl
@@ -543,4 +526,29 @@ std::string get_current_time_and_date()
     return ss.str();
 }
 
+bool connect(string cap_file) {
+    //input stream connection
+    cout << "Connecting to the input stream...";
+    cout.flush();
+
+    do {
+        if(using_pi) {
+            digitalWrite(0, HIGH);
+            delay(200);
+            digitalWrite(0, LOW);    
+            delay(200);
+        }
+
+        if(strcmp(cap_file.c_str(), "0") == 0) {
+            cap = new VideoCapture(0);
+        }
+        else {
+            cap = new VideoCapture(cap_file);
+        }
+    
+    } while (!cap->isOpened());
+
+    cout << "[OK]" << endl;
+    return true;
+}
 
