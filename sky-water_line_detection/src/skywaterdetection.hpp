@@ -104,5 +104,8 @@ private:
 
     std::string get_current_time_and_date();
 
+    void drawOptFlowMap(const Mat& flow, Mat& cflowmap, int step,
+                    double, const Scalar& color);
+
 };
 

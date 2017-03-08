@@ -273,6 +273,17 @@ void SkyWaterDetector::off_line() {
         out_frame_n = 0; 
         out_cnt++;		
     }
+
+
+
+
+    Mat flow, cflow;
+    UMat gray, prevgray, uflow;
+    namedWindow("flow", 1);
+
+
+
+
     
     bool run = true;
     while (run)
@@ -327,6 +338,18 @@ void SkyWaterDetector::off_line() {
         applyColorMap(H, cm_H, COLORMAP_HOT);
 
         Mat mask = computeMask(frame,I,S);
+
+
+        if( !prevgray.empty() )
+        {
+            calcOpticalFlowFarneback(prevgray, gray, uflow, 0.5, 3, 15, 3, 5, 1.2, 0);
+            cvtColor(prevgray, cflow, COLOR_GRAY2BGR);
+            uflow.copyTo(flow);
+            drawOptFlowMap(flow, cflow, 16, 1.5, Scalar(0, 255, 0));
+            imshow("flow", cflow);
+        }
+        
+        
         
 
         if(is_gui) {
@@ -393,6 +416,11 @@ void SkyWaterDetector::off_line() {
             quit = true;
             run = false;
         }
+
+
+        std::swap(prevgray, gray);
+
+
     }
 
 }
@@ -500,5 +528,19 @@ std::string SkyWaterDetector::get_current_time_and_date()
     ss << std::put_time(std::localtime(&in_time_t), "Y%Y-M%m-D%d-H%H-M%M-S%S");
     return ss.str();
 }
+
+void SkyWaterDetector::drawOptFlowMap(const Mat& flow, Mat& cflowmap, int step,
+                    double, const Scalar& color)
+{
+    for(int y = 0; y < cflowmap.rows; y += step)
+        for(int x = 0; x < cflowmap.cols; x += step)
+        {
+            const Point2f& fxy = flow.at<Point2f>(y, x);
+            line(cflowmap, Point(x,y), Point(cvRound(x+fxy.x), cvRound(y+fxy.y)),
+                 color);
+            circle(cflowmap, Point(x,y), 2, color, -1);
+        }
+}
+
 
 
