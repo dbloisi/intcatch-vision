@@ -65,7 +65,7 @@ SkyWaterDetector::SkyWaterDetector(string cap_file,
 
     min_saturation_slider = 0;
     max_saturation_slider = 50;
-    min_brightness_slider = 50;
+    min_brightness_slider = 0;
     max_brightness_slider = 150;
 
     if(is_gui) {
@@ -93,7 +93,16 @@ SkyWaterDetector::SkyWaterDetector(string cap_file,
         on_max_b_trackbar(max_brightness_slider, this);
     } //is_gui
 
-
+    //optical flow
+    termcrit.type = TermCriteria::COUNT|TermCriteria::EPS;
+    termcrit.maxCount = 20;
+    termcrit.epsilon = 0.03;
+    subPixWinSize.width = 10;
+    subPixWinSize.height = 10;
+    winSize.width = 31;
+    winSize.height = 31;
+    needToInit = true;
+    nightMode = false;
 }
 
 void SkyWaterDetector::detect()
@@ -276,13 +285,10 @@ void SkyWaterDetector::off_line() {
 
 
 
-
-    Mat flow, cflow;
-    UMat gray, prevgray, uflow;
-    namedWindow("flow", 1);
-
-
-
+    //optical flow
+    Mat gray, prevGray, image;
+    vector<Point2f> points[2];
+    Point2f point;
 
     
     bool run = true;
@@ -340,16 +346,40 @@ void SkyWaterDetector::off_line() {
         Mat mask = computeMask(frame,I,S);
 
 
-        if( !prevgray.empty() )
+        //optical flow
+        frame.copyTo(image);
+        cvtColor(image, gray, COLOR_BGR2GRAY);  
+        if( needToInit )
         {
-            calcOpticalFlowFarneback(prevgray, gray, uflow, 0.5, 3, 15, 3, 5, 1.2, 0);
-            cvtColor(prevgray, cflow, COLOR_GRAY2BGR);
-            uflow.copyTo(flow);
-            drawOptFlowMap(flow, cflow, 16, 1.5, Scalar(0, 255, 0));
-            imshow("flow", cflow);
+            // automatic initialization
+            goodFeaturesToTrack(gray, points[1], MAX_COUNT, 0.01, 10, Mat(), 3, 0, 0.04);
+            cornerSubPix(gray, points[1], subPixWinSize, Size(-1,-1), termcrit);
         }
+        else if( !points[0].empty() )
+        {
+            vector<uchar> status;
+            vector<float> err;
+            if(prevGray.empty())
+                gray.copyTo(prevGray);
+            calcOpticalFlowPyrLK(prevGray, gray, points[0], points[1], status, err, winSize,
+                                 3, termcrit, 0, 0.001);
+            size_t i, k;
+            for( i = k = 0; i < points[1].size(); i++ )
+            {
+                if( !status[i] )
+                    continue;
+
+                points[1][k++] = points[1][i];
+                circle( image, points[1][i], 3, Scalar(0,255,0), -1, 8);
+            }
+            points[1].resize(k);
+        }
+
         
-        
+
+        needToInit = false;
+        imshow("LK Demo", image);
+        //
         
 
         if(is_gui) {
@@ -417,9 +447,10 @@ void SkyWaterDetector::off_line() {
             run = false;
         }
 
-
-        std::swap(prevgray, gray);
-
+        
+        //opticalflow
+        std::swap(points[1], points[0]);
+        cv::swap(prevGray, gray);
 
     }
 
@@ -482,11 +513,22 @@ void SkyWaterDetector::on_max_b_trackbar(int value) {
 } 
 
 Mat SkyWaterDetector::computeMask(const Mat& frame, const Mat& I, const Mat& S) {
+
+    Mat frame_gray;
+    cvtColor(frame, frame_gray, CV_BGR2GRAY);
+    Mat mask_otsu;
+    cv::threshold(frame_gray, mask_otsu, 0, 255, CV_THRESH_BINARY | CV_THRESH_OTSU);
+
+    imshow("otsu", mask_otsu);
+
     Mat mask(frame.rows, frame.cols, CV_8UC3);
     Mat mask_gray(frame.rows, frame.cols, CV_8UC1);
     for(int i = 0; i < frame.rows; ++i) {
         for(int j = 0; j < frame.cols; ++j) {
-            if(I.at<uchar>(i,j) > 0 && S.at<uchar>(i,j) > 0) {
+            if(I.at<uchar>(i,j) > 0 &&
+               S.at<uchar>(i,j) > 0 &&
+               mask_otsu.at<uchar>(i,j) == 0)
+            {
                 mask.at<Vec3b>(i,j) = frame.at<Vec3b>(i,j);
                 mask_gray.at<uchar>(i,j) = 255;
             }
@@ -497,6 +539,10 @@ Mat SkyWaterDetector::computeMask(const Mat& frame, const Mat& I, const Mat& S) 
         }
     }
 
+    
+
+
+    //find biggest area
     std::vector < std::vector<Point> > contours;
 
     Mat tmpBinaryImage = mask_gray.clone();
@@ -528,19 +574,4 @@ std::string SkyWaterDetector::get_current_time_and_date()
     ss << std::put_time(std::localtime(&in_time_t), "Y%Y-M%m-D%d-H%H-M%M-S%S");
     return ss.str();
 }
-
-void SkyWaterDetector::drawOptFlowMap(const Mat& flow, Mat& cflowmap, int step,
-                    double, const Scalar& color)
-{
-    for(int y = 0; y < cflowmap.rows; y += step)
-        for(int x = 0; x < cflowmap.cols; x += step)
-        {
-            const Point2f& fxy = flow.at<Point2f>(y, x);
-            line(cflowmap, Point(x,y), Point(cvRound(x+fxy.x), cvRound(y+fxy.y)),
-                 color);
-            circle(cflowmap, Point(x,y), 2, color, -1);
-        }
-}
-
-
 

@@ -17,6 +17,10 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include "opencv2/features2d/features2d.hpp"
 
+#include "opencv2/video/tracking.hpp"
+#include "opencv2/videoio/videoio.hpp"
+
+
 #include <chrono>
 
 #include <iomanip>
@@ -75,6 +79,17 @@ private:
     int horizonline;
     float alpha;
 
+    //opticalflow
+    TermCriteria termcrit;
+    Size subPixWinSize;
+    Size winSize;
+    const int MAX_COUNT = 500;
+    bool needToInit;
+    bool nightMode;
+
+
+
+
 public:
     SkyWaterDetector(string cap_file,
                      float alpha,
@@ -104,8 +119,6 @@ private:
 
     std::string get_current_time_and_date();
 
-    void drawOptFlowMap(const Mat& flow, Mat& cflowmap, int step,
-                    double, const Scalar& color);
 
 };
 
