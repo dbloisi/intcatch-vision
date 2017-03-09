@@ -289,6 +289,7 @@ void SkyWaterDetector::off_line() {
     Mat gray, prevGray, image;
     vector<Point2f> points[2];
     Point2f point;
+    
 
     
     bool run = true;

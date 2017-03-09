@@ -46,6 +46,7 @@ private:
     VideoCapture *cap;
     bool is_live;
     string cap_file;
+    int in_frame_n;
     //output data
     bool out_set;
     string outvideo_filename;
