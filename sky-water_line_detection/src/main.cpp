@@ -142,7 +142,7 @@ void processClips(string dir, float alpha, string outvideo_filename) {
 
     cout << "processing video file: " << s << endl;
 
-    SkyWaterDetector swd(s, alpha, outvideo_filename, -1, false, true);
+    SkyWaterDetector swd(s, alpha, outvideo_filename, -1, false, false);
     swd.detect();
 
     bool run = true;

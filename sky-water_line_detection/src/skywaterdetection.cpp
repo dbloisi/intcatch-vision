@@ -14,7 +14,8 @@ SkyWaterDetector::SkyWaterDetector(string cap_file,
                                    bool is_live,
                                    bool is_gui)
 {
-
+    out_frame_n = 0;
+   
     ready = false;
     processed = false;
     quit = false;
@@ -301,6 +302,8 @@ void SkyWaterDetector::off_line() {
             cout << "Unable to read frame from input stream" << endl;
             break;
         }
+
+        in_frame_n++;
                 
 	Mat I(frame.rows, frame.cols, CV_8UC1);
         Mat S(frame.rows, frame.cols, CV_8UC1);
@@ -377,10 +380,17 @@ void SkyWaterDetector::off_line() {
         }
 
         
-
-        needToInit = false;
+        if(in_frame_n % 100 == 0) {
+            needToInit = true;
+        }
+        else {
+            needToInit = false;
+        }
         imshow("LK Demo", image);
+
+        image.copyTo(frame);
         //
+        
         
 
         if(is_gui) {
