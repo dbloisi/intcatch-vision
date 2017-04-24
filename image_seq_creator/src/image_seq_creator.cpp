@@ -5,29 +5,39 @@
  * email: domenico.bloisi@gmail.com
  */
 
+//C++
+#include <iostream>
+#include <sstream>
+#include <iomanip>
+#include <fstream>
+
 #include <string>
 
+#include <chrono>
+
+//opencv
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
-#include <iostream>
-#include <sstream>
-#include <iomanip>
-
 using namespace cv;
 using namespace std;
+using namespace std::chrono;
 
 //input data
+string cap_file = "";
 VideoCapture *cap;
-bool is_live =false;
+bool is_live = false;
 //output data
-string out_dir = "images/";
+string out_dir = "rgb/";
 int out_frame_n = -1;
 //gui
-bool is_gui =false;
+bool is_gui = false;
 
 int width = -1, height = -1;
+
+//time stamp file
+ofstream* ts_file;
 
 /**
 *
@@ -46,8 +56,7 @@ bool connect(string cap_file);
 int main(int argc, char* argv[])
 {
     bool in_set = false;	
-    string cap_file = "";
-    
+        
     	
     //print help information
     help();
@@ -90,11 +99,32 @@ int main(int argc, char* argv[])
         cerr <<"Exiting..." << endl;
         return EXIT_FAILURE;
     }
+
+    ts_file = new ofstream("rgb.txt");
+    if (ts_file->is_open())
+    {
+        cout << "Timestamp data will be written to \'rgb.txt\'.\n" << endl;
+        string s = "# color images\n";
+        ts_file->write(s.c_str(), s.length());
+        s.assign("# file: \'");
+        ts_file->write(s.c_str(), s.length());
+        ts_file->write(cap_file.c_str(), cap_file.length());
+        s.assign("\'\n");
+        ts_file->write(s.c_str(), s.length());
+        s.assign("# timestamp filename\n");
+        ts_file->write(s.c_str(), s.length());
+
+        ts_file->flush();
+    }
+    else {
+        cout << "Unable to open file \'rgb.txt\'";
+        return EXIT_FAILURE;
+    }
        
     connect(cap_file);
 
-    double dWidth = cap->get(CV_CAP_PROP_FRAME_WIDTH); //get the width of frames of the video
-    double dHeight = cap->get(CV_CAP_PROP_FRAME_HEIGHT); //get the height of frames of the video
+    double dWidth = cap->get(CV_CAP_PROP_FRAME_WIDTH); 
+    double dHeight = cap->get(CV_CAP_PROP_FRAME_HEIGHT); 
 
     cout << "Input frame size: " << dWidth << " x " << dHeight << endl;
 
@@ -110,11 +140,10 @@ int main(int argc, char* argv[])
     if(is_gui) {
         namedWindow("video", CV_WINDOW_AUTOSIZE);
     }
+    
+    process();
 
-    //while(true) {
-        process();
-      //  connect(cap_file);
-    //}
+    ts_file->close();
 
     return EXIT_SUCCESS;
 }
@@ -132,6 +161,15 @@ void process() {
     }
 
     out_frame_n = 0;
+
+    system_clock::time_point tp = system_clock::now();
+    system_clock::duration dtn = tp.time_since_epoch();
+
+    unsigned long seconds_since_epoch =
+        dtn.count() * system_clock::period::num / system_clock::period::den;
+    
+    std::cout << "current time since epoch (sec): "
+              << seconds_since_epoch << endl;
 
     bool run = true;
     while (run)
@@ -164,9 +202,9 @@ void process() {
 
         stringstream ss;
         ss << setfill('0') << setw(5) << out_frame_n;
-        string imagename = out_dir + ss.str() + ".jpg";
+        string imagename = out_dir + ss.str() + ".png";
 
-        cout << "saving image: " << imagename << " ..." << endl;
+        cout << "saving image: " << imagename << " ...";
         cout.flush();
 
         if(width > 0 && height > 0) {
@@ -185,6 +223,24 @@ void process() {
             cout << "Unable to save the image" << endl;
             exit(-1);
         }
+
+        long timestamp = cap->get(CV_CAP_PROP_POS_MSEC);
+
+        unsigned long t = seconds_since_epoch*1000 + timestamp;
+        double d = (t * 1000)/1000000.0;
+
+        ostringstream os;
+        os << fixed << d;
+        string str = os.str();
+
+        //std::cout << "Timestamp: " << str << std::endl;
+        ts_file->write(str.c_str(), str.length());
+        ts_file->write(" ", 1);
+        ts_file->write(imagename.c_str(), imagename.length());
+        ts_file->write("\n", 1);
+        ts_file->flush();
+        
+
         
         if (is_gui && waitKey(30) == 27) //wait for 'esc' key press for 30ms. If 'esc' key is pressed, break loop
         {
@@ -201,10 +257,13 @@ void help()
     << "This program create an image sequence from a camera "                                   << endl
     << "or a video."                                                                            << endl
     << endl
+    << "*** Images are written into a folder named \'images\'"                                  << endl
+    << "that should be created by the user. ***"                                                << endl
+    << endl
     << "Usage:"                                                                                 << endl
     << "./image_seq_creator -in <source>"                                                       << endl
     << endl
-    << "Examples:"                                                                              << endl
+    << "Example:"                                                                               << endl
     << "  ./image_seq_creator -in video.mp4"                                                    << endl
     << endl
     << "----------------------------------------------------------------------------"           << endl
