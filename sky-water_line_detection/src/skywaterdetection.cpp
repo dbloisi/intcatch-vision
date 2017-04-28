@@ -290,7 +290,6 @@ void SkyWaterDetector::off_line() {
     if(!calib_file.empty()) {
         cout << "input images will be UNDISTORTED" << endl;
         readCalibData(calib_file);
-        exit(-1);
     }
 
 
@@ -309,6 +308,12 @@ void SkyWaterDetector::off_line() {
         {
             cout << "Unable to read frame from input stream" << endl;
             break;
+        }
+
+        if(!calib_file.empty()) {
+            Mat temp;
+            undistort(frame, temp, cameraMatrix, distCoeffs);
+            frame = temp.clone();
         }
 
         in_frame_n++;
@@ -597,23 +602,10 @@ std::string SkyWaterDetector::get_current_time_and_date()
 void SkyWaterDetector::readCalibData(string calib_file)
 {
     FileStorage fs(calib_file, FileStorage::READ);
-
-    // first method: use (type) operator on FileNode.
-    int frameCount = (int)fs["frameCount"];
-
-    std::string date;
-    // second method: use FileNode::operator >>
-    fs["calibrationDate"] >> date;
-
-    Mat cameraMatrix, distCoeffs;
-    fs["cameraMatrix"] >> cameraMatrix;
-    fs["distCoeffs"] >> distCoeffs;
-
-    cout << "frameCount: " << frameCount << endl
-     << "calibration date: " << date << endl
-     << "camera matrix: " << cameraMatrix << endl
-     << "distortion coeffs: " << distCoeffs << endl;
-
+    fs["Camera_Matrix"] >> cameraMatrix;
+    fs["Distortion_Coefficients"] >> distCoeffs;
+    cout << "camera matrix: " << cameraMatrix << endl
+         << "distortion coeffs: " << distCoeffs << endl;
     fs.release();
 }
 

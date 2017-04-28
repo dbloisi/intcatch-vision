@@ -92,7 +92,7 @@ private:
     bool nightMode;
 
 
-
+    Mat cameraMatrix, distCoeffs;
 
 public:
     SkyWaterDetector(string cap_file,
