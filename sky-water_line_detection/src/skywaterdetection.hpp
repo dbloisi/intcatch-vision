@@ -47,6 +47,9 @@ private:
     bool is_live;
     string cap_file;
     int in_frame_n;
+
+    string calib_file;
+
     //output data
     bool out_set;
     string outvideo_filename;
@@ -97,7 +100,8 @@ public:
                      string outvideo_filename,
                      int max_length,
                      bool is_live,
-                     bool is_gui);
+                     bool is_gui,
+                     string calib_file);
 
     void detect();
     int getHorizonline();
@@ -120,6 +124,7 @@ private:
 
     std::string get_current_time_and_date();
 
+    void readCalibData(string calib_file);
 
 };
 

@@ -12,7 +12,8 @@ SkyWaterDetector::SkyWaterDetector(string cap_file,
                                    string outvideo_filename,
                                    int max_length,
                                    bool is_live,
-                                   bool is_gui)
+                                   bool is_gui,
+                                   string calib_file)
 {
     out_frame_n = 0;
    
@@ -39,6 +40,8 @@ SkyWaterDetector::SkyWaterDetector(string cap_file,
         }
     }
     this->is_gui = is_gui;
+
+    this->calib_file.assign(calib_file);
 
     cap = new VideoCapture(cap_file);
     
@@ -238,7 +241,7 @@ void SkyWaterDetector::on_line() {
 
 void SkyWaterDetector::off_line() {
 
-    cout << "SINGLE THREAD ACQUISITION" << endl;
+    cout << "OFF LINE ACQUISITION" << endl;
 
     VideoWriter _outputVideo;
     
@@ -284,6 +287,11 @@ void SkyWaterDetector::off_line() {
         out_cnt++;		
     }
 
+    if(!calib_file.empty()) {
+        cout << "input images will be UNDISTORTED" << endl;
+        readCalibData(calib_file);
+        exit(-1);
+    }
 
 
     //optical flow
@@ -584,5 +592,28 @@ std::string SkyWaterDetector::get_current_time_and_date()
     std::stringstream ss;
     ss << std::put_time(std::localtime(&in_time_t), "Y%Y-M%m-D%d-H%H-M%M-S%S");
     return ss.str();
+}
+
+void SkyWaterDetector::readCalibData(string calib_file)
+{
+    FileStorage fs(calib_file, FileStorage::READ);
+
+    // first method: use (type) operator on FileNode.
+    int frameCount = (int)fs["frameCount"];
+
+    std::string date;
+    // second method: use FileNode::operator >>
+    fs["calibrationDate"] >> date;
+
+    Mat cameraMatrix, distCoeffs;
+    fs["cameraMatrix"] >> cameraMatrix;
+    fs["distCoeffs"] >> distCoeffs;
+
+    cout << "frameCount: " << frameCount << endl
+     << "calibration date: " << date << endl
+     << "camera matrix: " << cameraMatrix << endl
+     << "distortion coeffs: " << distCoeffs << endl;
+
+    fs.release();
 }
 

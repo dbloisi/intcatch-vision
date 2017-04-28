@@ -48,6 +48,8 @@ int main(int argc, char* argv[])
     string dir;
 
     int max_frames = 1000;
+
+    string calib_file = "";
 	
     //print help information
     help();
@@ -82,6 +84,9 @@ int main(int argc, char* argv[])
             dir.assign(argv[++i]);
             dir_set = true;
         }
+        else if(strcmp(argv[i], "-calib") == 0) {
+            calib_file.assign(argv[++i]);
+        }
         else {
             //error in reading input parameters
             cerr <<"Please, check the input parameters." << endl;
@@ -101,7 +106,7 @@ int main(int argc, char* argv[])
         processClips(dir, alpha, outvideo_filename);
     }
     else {
-        SkyWaterDetector swd(cap_file, alpha, outvideo_filename, max_frames, is_live, is_gui);
+        SkyWaterDetector swd(cap_file, alpha, outvideo_filename, max_frames, is_live, is_gui, calib_file);
         swd.detect();
     }
     
@@ -142,7 +147,7 @@ void processClips(string dir, float alpha, string outvideo_filename) {
 
     cout << "processing video file: " << s << endl;
 
-    SkyWaterDetector swd(s, alpha, outvideo_filename, -1, false, false);
+    SkyWaterDetector swd(s, alpha, outvideo_filename, -1, false, false, "");
     swd.detect();
 
     bool run = true;
@@ -157,7 +162,7 @@ void processClips(string dir, float alpha, string outvideo_filename) {
         else {
             prev_s = s;
             cout << "clip: " << s << endl;
-            SkyWaterDetector swd(s, alpha, outvideo_filename, -1, false, true);
+            SkyWaterDetector swd(s, alpha, outvideo_filename, -1, false, true, "");
             swd.detect();
         }    
     }	
