@@ -91,6 +91,9 @@ private:
     bool needToInit;
     bool nightMode;
 
+    Mat gray, prevGray, image;
+    vector<Point2f> points[2];
+    Point2f point;
 
     Mat cameraMatrix, distCoeffs;
 
@@ -125,6 +128,10 @@ private:
     std::string get_current_time_and_date();
 
     void readCalibData(string calib_file);
+
+    Mat colorAnalysis(Mat& frame);
+
+    void opticalFlow(Mat& frame);
 
 };
 

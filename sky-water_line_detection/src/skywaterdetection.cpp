@@ -293,10 +293,7 @@ void SkyWaterDetector::off_line() {
     }
 
 
-    //optical flow
-    Mat gray, prevGray, image;
-    vector<Point2f> points[2];
-    Point2f point;
+    
     
 
     
@@ -317,94 +314,12 @@ void SkyWaterDetector::off_line() {
         }
 
         in_frame_n++;
-                
-	Mat I(frame.rows, frame.cols, CV_8UC1);
-        Mat S(frame.rows, frame.cols, CV_8UC1);
 
-        Mat H(frame.rows, frame.cols, CV_8UC1);
-        Mat hsv;
-        cvtColor( frame, hsv, CV_BGR2HSV );
-        
-        for(int i = 0; i < frame.rows; ++i) {
-            for(int j = 0; j < frame.cols; ++j) {
+        //Mat mask = colorAnalysis(frame);
+            
+        opticalFlow(frame);
 
-                uchar b = cvRound((frame.at<Vec3b>(i,j)[0] +
-                           frame.at<Vec3b>(i,j)[1] +
-                           frame.at<Vec3b>(i,j)[2] ) / 3.f);
-
-
-                float s = 255.f * (1.f - (std::min(frame.at<Vec3b>(i,j)[0],
-                                         std::min(frame.at<Vec3b>(i,j)[1], frame.at<Vec3b>(i,j)[2]))
-                                     / (float)b));
-
-                if(b >= min_brightness && b <= max_brightness) { 
-                    I.at<uchar>(i,j) = b;
-                }
-                else {
-                    I.at<uchar>(i,j) = 0;
-                }
-                if(s >= min_saturation && s <= max_saturation) { 
-                    S.at<uchar>(i,j) = (uchar)s;
-                }
-                else {
-                    S.at<uchar>(i,j) = 0;
-                }
-            }
-        }
-
-        // Apply the colormap
-        Mat cm_I;
-        applyColorMap(I, cm_I, COLORMAP_HOT);
-        Mat cm_S;
-        applyColorMap(S, cm_S, COLORMAP_HOT);
-        Mat cm_H;
-        applyColorMap(H, cm_H, COLORMAP_HOT);
-
-        Mat mask = computeMask(frame,I,S);
-
-
-        //optical flow
-        frame.copyTo(image);
-        cvtColor(image, gray, COLOR_BGR2GRAY);  
-        if( needToInit )
-        {
-            // automatic initialization
-            goodFeaturesToTrack(gray, points[1], MAX_COUNT, 0.01, 10, Mat(), 3, 0, 0.04);
-            cornerSubPix(gray, points[1], subPixWinSize, Size(-1,-1), termcrit);
-        }
-        else if( !points[0].empty() )
-        {
-            vector<uchar> status;
-            vector<float> err;
-            if(prevGray.empty())
-                gray.copyTo(prevGray);
-            calcOpticalFlowPyrLK(prevGray, gray, points[0], points[1], status, err, winSize,
-                                 3, termcrit, 0, 0.001);
-            size_t i, k;
-            for( i = k = 0; i < points[1].size(); i++ )
-            {
-                if( !status[i] )
-                    continue;
-
-                points[1][k++] = points[1][i];
-                circle( image, points[1][i], 3, Scalar(0,255,0), -1, 8);
-            }
-            points[1].resize(k);
-        }
-
-        
-        if(in_frame_n % 100 == 0) {
-            needToInit = true;
-        }
-        else {
-            needToInit = false;
-        }
-        imshow("LK Demo", image);
-
-        image.copyTo(frame);
-        //
-        
-        
+  
 
         if(is_gui) {
             //get the frame number and write it on the current frame
@@ -416,12 +331,7 @@ void SkyWaterDetector::off_line() {
             putText(frame, frameNumberString.c_str(), cv::Point(15, 15),
                 FONT_HERSHEY_SIMPLEX, 0.5 , cv::Scalar(0,0,0));
         
-            imshow("video", frame);
-
-            imshow("Brightness", cm_I); 
-            imshow("Saturation", cm_S);
-        
-            imshow("mask", mask); 
+            imshow("video", frame); 
         }
         else {
             cout << ".";
@@ -472,9 +382,7 @@ void SkyWaterDetector::off_line() {
         }
 
         
-        //opticalflow
-        std::swap(points[1], points[0]);
-        cv::swap(prevGray, gray);
+        
 
     }
 
@@ -609,3 +517,103 @@ void SkyWaterDetector::readCalibData(string calib_file)
     fs.release();
 }
 
+Mat SkyWaterDetector::colorAnalysis(Mat &frame)
+{   
+    Mat I(frame.rows, frame.cols, CV_8UC1);
+    Mat S(frame.rows, frame.cols, CV_8UC1);
+
+    Mat H(frame.rows, frame.cols, CV_8UC1);
+    Mat hsv;
+    cvtColor( frame, hsv, CV_BGR2HSV );
+
+    for(int i = 0; i < frame.rows; ++i) {
+        for(int j = 0; j < frame.cols; ++j) {
+
+            uchar b = cvRound((frame.at<Vec3b>(i,j)[0] +
+                   frame.at<Vec3b>(i,j)[1] +
+                   frame.at<Vec3b>(i,j)[2] ) / 3.f);
+
+
+            float s = 255.f * (1.f - (std::min(frame.at<Vec3b>(i,j)[0],
+                                 std::min(frame.at<Vec3b>(i,j)[1], frame.at<Vec3b>(i,j)[2]))
+                             / (float)b));
+
+            if(b >= min_brightness && b <= max_brightness) { 
+                I.at<uchar>(i,j) = b;
+            }
+            else {
+                I.at<uchar>(i,j) = 0;
+            }
+            if(s >= min_saturation && s <= max_saturation) { 
+                S.at<uchar>(i,j) = (uchar)s;
+            }
+            else {
+                S.at<uchar>(i,j) = 0;
+            }
+        }
+    }
+
+    // Apply the colormap
+    Mat cm_I;
+    applyColorMap(I, cm_I, COLORMAP_HOT);
+    Mat cm_S;
+    applyColorMap(S, cm_S, COLORMAP_HOT);
+    Mat cm_H;
+    applyColorMap(H, cm_H, COLORMAP_HOT);
+
+    Mat mask = computeMask(frame,I,S);
+    
+    if(is_gui){
+        imshow("Brightness", cm_I); 
+        imshow("Saturation", cm_S);
+        
+        imshow("mask", mask);
+    }
+    return mask;
+}
+
+void SkyWaterDetector::opticalFlow(Mat& frame) {
+        frame.copyTo(image);
+        cvtColor(image, gray, COLOR_BGR2GRAY);  
+        if( needToInit )
+        {
+            // automatic initialization
+            goodFeaturesToTrack(gray, points[1], MAX_COUNT, 0.01, 10, Mat(), 3, 0, 0.04);
+            cornerSubPix(gray, points[1], subPixWinSize, Size(-1,-1), termcrit);
+        }
+        else if( !points[0].empty() )
+        {
+            vector<uchar> status;
+            vector<float> err;
+            if(prevGray.empty())
+                gray.copyTo(prevGray);
+            calcOpticalFlowPyrLK(prevGray, gray, points[0], points[1], status, err, winSize,
+                                 3, termcrit, 0, 0.001);
+            size_t i, k;
+            for( i = k = 0; i < points[1].size(); i++ )
+            {
+                if( !status[i] )
+                    continue;
+
+                points[1][k++] = points[1][i];
+                circle( image, points[1][i], 3, Scalar(0,255,0), -1, 8);
+            }
+            points[1].resize(k);
+        }
+
+        
+        if(in_frame_n % 100 == 0) {
+            needToInit = true;
+        }
+        else {
+            needToInit = false;
+        }
+        imshow("LK Demo", image);
+
+        image.copyTo(frame);
+        
+    //opticalflow
+        std::swap(points[1], points[0]);
+        cv::swap(prevGray, gray);
+        
+}
