@@ -97,16 +97,10 @@ SkyWaterDetector::SkyWaterDetector(string cap_file,
         on_max_b_trackbar(max_brightness_slider, this);
     } //is_gui
 
-    //optical flow
-    termcrit.type = TermCriteria::COUNT|TermCriteria::EPS;
-    termcrit.maxCount = 20;
-    termcrit.epsilon = 0.03;
-    subPixWinSize.width = 10;
-    subPixWinSize.height = 10;
-    winSize.width = 31;
-    winSize.height = 31;
-    needToInit = true;
-    nightMode = false;
+    Mat radar = imread("radar.png");
+    imshow("radar", radar);
+
+
 }
 
 void SkyWaterDetector::detect()
@@ -317,7 +311,7 @@ void SkyWaterDetector::off_line() {
 
         //Mat mask = colorAnalysis(frame);
             
-        opticalFlow(frame);
+        ft.process(frame);
 
   
 
@@ -572,48 +566,3 @@ Mat SkyWaterDetector::colorAnalysis(Mat &frame)
     return mask;
 }
 
-void SkyWaterDetector::opticalFlow(Mat& frame) {
-        frame.copyTo(image);
-        cvtColor(image, gray, COLOR_BGR2GRAY);  
-        if( needToInit )
-        {
-            // automatic initialization
-            goodFeaturesToTrack(gray, points[1], MAX_COUNT, 0.01, 10, Mat(), 3, 0, 0.04);
-            cornerSubPix(gray, points[1], subPixWinSize, Size(-1,-1), termcrit);
-        }
-        else if( !points[0].empty() )
-        {
-            vector<uchar> status;
-            vector<float> err;
-            if(prevGray.empty())
-                gray.copyTo(prevGray);
-            calcOpticalFlowPyrLK(prevGray, gray, points[0], points[1], status, err, winSize,
-                                 3, termcrit, 0, 0.001);
-            size_t i, k;
-            for( i = k = 0; i < points[1].size(); i++ )
-            {
-                if( !status[i] )
-                    continue;
-
-                points[1][k++] = points[1][i];
-                circle( image, points[1][i], 3, Scalar(0,255,0), -1, 8);
-            }
-            points[1].resize(k);
-        }
-
-        
-        if(in_frame_n % 100 == 0) {
-            needToInit = true;
-        }
-        else {
-            needToInit = false;
-        }
-        imshow("LK Demo", image);
-
-        image.copyTo(frame);
-        
-    //opticalflow
-        std::swap(points[1], points[0]);
-        cv::swap(prevGray, gray);
-        
-}

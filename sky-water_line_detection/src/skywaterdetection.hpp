@@ -26,6 +26,9 @@
 #include <iomanip>
 
 
+#include "featuretracker.hpp"
+
+
 using namespace cv;
 using namespace std;
 
@@ -80,22 +83,14 @@ private:
     int max_saturation_slider;
     double max_saturation;
 
+    //calibration
+    Mat cameraMatrix, distCoeffs;
+
+    //horizonline detection
     int horizonline;
     float alpha;
 
-    //opticalflow
-    TermCriteria termcrit;
-    Size subPixWinSize;
-    Size winSize;
-    const int MAX_COUNT = 500;
-    bool needToInit;
-    bool nightMode;
-
-    Mat gray, prevGray, image;
-    vector<Point2f> points[2];
-    Point2f point;
-
-    Mat cameraMatrix, distCoeffs;
+    FeatureTracker ft;
 
 public:
     SkyWaterDetector(string cap_file,
@@ -130,8 +125,6 @@ private:
     void readCalibData(string calib_file);
 
     Mat colorAnalysis(Mat& frame);
-
-    void opticalFlow(Mat& frame);
 
 };
 
