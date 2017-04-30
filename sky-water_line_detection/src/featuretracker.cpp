@@ -40,52 +40,66 @@ FeatureTracker::FeatureTracker(TermCriteria termcrit,
 }
 
 void FeatureTracker::process(cv::Mat& frame) {
-    frame.copyTo(image);
-    cvtColor(image, gray, COLOR_BGR2GRAY);  
-    if( needToInit )
-    {
-        // automatic initialization
-        goodFeaturesToTrack(gray, points[1], max_count, 0.01, 10, Mat(), 3, 0, 0.04);
-        cornerSubPix(gray, points[1], subPixWinSize, Size(-1,-1), termcrit);
-    }
-    else if( !points[0].empty() )
-    {
-        vector<uchar> status;
-        vector<float> err;
-        if(prevGray.empty()) {
-            gray.copyTo(prevGray);
-        }
-        calcOpticalFlowPyrLK(prevGray, gray, points[0], points[1],
-                             status, err, winSize,
-                             3, termcrit, 0, 0.001);
-        size_t i, k;
-        for( i = k = 0; i < points[1].size(); i++ )
-        {
-            if( !status[i] )
-                continue;
+    int w = frame.cols / slices;
+    for(int i = 0; i < slices; ++i) {
 
-            points[1][k++] = points[1][i];
-            circle( image, points[1][i], 3, Scalar(0,255,0), -1, 8);
-        }
-        points[1].resize(k);
-    }
+        cout << "sono qui" << endl;
+        cout << Rect(w * i, 0, w, frame.rows) << endl;
 
-        
-    if(points[1].size() < 10) {
-        needToInit = true;
-    }
-    else {
-        needToInit = false;
-    }
-    imshow("LK Demo", image);
+        Mat slice(frame, Rect(w * i, 0, w * (i+1), frame.rows));
 
-    image.copyTo(frame);
-        
-    std::swap(points[1], points[0]);
-    cv::swap(prevGray, gray);
+        computeSlice(slice);
+	
+    }//for slices
 }
 
 void FeatureTracker::setSlices(int n) {
     slices = n;
+}
+
+void FeatureTracker::computeSlice(cv::Mat& slice) {
+    slice.copyTo(image);
+    cvtColor(image, gray, COLOR_BGR2GRAY);  
+    if( needToInit )
+    {
+	// automatic initialization
+	goodFeaturesToTrack(gray, points[1], max_count, 0.01, 10, Mat(), 3, 0, 0.04);
+	cornerSubPix(gray, points[1], subPixWinSize, Size(-1,-1), termcrit);
+    }
+    else if( !points[0].empty() )
+    {
+	vector<uchar> status;
+	vector<float> err;
+	if(prevGray.empty()) {
+	    gray.copyTo(prevGray);
+	}
+	calcOpticalFlowPyrLK(prevGray, gray, points[0], points[1],
+	                     status, err, winSize,
+	                     3, termcrit, 0, 0.001);
+	size_t i, k;
+	for( i = k = 0; i < points[1].size(); i++ )
+	{
+	    if( !status[i] )
+	        continue;
+
+	    points[1][k++] = points[1][i];
+	    circle( image, points[1][i], 3, Scalar(0,255,0), -1, 8);
+	}
+	points[1].resize(k);
+    }
+
+	
+    if(points[1].size() < 10) {
+	needToInit = true;
+    }
+    else {
+	needToInit = false;
+    }
+    imshow("LK Demo", image);
+
+    //image.copyTo(frame);
+	
+    std::swap(points[1], points[0]);
+    cv::swap(prevGray, gray);
 }
 

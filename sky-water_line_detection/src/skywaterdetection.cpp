@@ -288,7 +288,7 @@ void SkyWaterDetector::off_line() {
 
 
     
-    
+    ft.setSlices(8);
 
     
     bool run = true;

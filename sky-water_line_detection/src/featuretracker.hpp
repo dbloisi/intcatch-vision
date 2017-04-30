@@ -55,5 +55,7 @@ public:
                    bool needToInit);
     void process(cv::Mat& frame);
     void setSlices(int n);
+private:
+    void computeSlice(cv::Mat& slice);
 };
 
