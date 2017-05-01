@@ -17,15 +17,22 @@ FeatureTracker::FeatureTracker()
     winSize.width = 31;
     winSize.height = 31;
     max_count = 500;
-    needToInit = true;
-    slices = 1;
+    slices = 4;
+    needToInit.resize(slices);
+    for(int i = 0; i < slices; ++i) {
+        needToInit[i] = true;
+    }    
+
+    prev_points.resize(slices);
+    points.resize(slices);
+    history.resize(slices);
 }
 
 FeatureTracker::FeatureTracker(TermCriteria termcrit,
                                Size subPixWinSize,
                                Size winSize,
                                int max_count,
-                               bool needToInit)
+                               int slices)
 {
     this->termcrit.type = termcrit.type;
     this->termcrit.maxCount = termcrit.maxCount;
@@ -35,71 +42,90 @@ FeatureTracker::FeatureTracker(TermCriteria termcrit,
     this->winSize.width = winSize.width;
     this->winSize.height = winSize.height;
     this->max_count = max_count;
-    this->needToInit = needToInit;
-    slices = 1; 
+    this->slices = slices;
+
+    needToInit.resize(slices);
+    for(int i = 0; i < slices; ++i) {
+        needToInit[i] = true;
+    }
+
+    points.resize(slices);
+    history.resize(slices);
 }
 
 void FeatureTracker::process(cv::Mat& frame) {
     int w = frame.cols / slices;
+
+    frame.copyTo(image);
+    cvtColor(image, gray, COLOR_BGR2GRAY);
+    if(prevGray.empty()) {
+        gray.copyTo(prevGray);
+        return;
+    }
+
     for(int i = 0; i < slices; ++i) {
+        cout << Rect(w * i, 0, w, gray.rows) << endl;
 
-        cout << "sono qui" << endl;
-        cout << Rect(w * i, 0, w, frame.rows) << endl;
+        Mat slice(gray, Rect(w * i, 0, w, gray.rows));
 
-        Mat slice(frame, Rect(w * i, 0, w * (i+1), frame.rows));
+        Mat prev_slice(prevGray, Rect(w * i, 0, w, prevGray.rows));
 
-        computeSlice(slice);
+        computeSlice(prev_slice, slice, i);
 	
     }//for slices
+    cv::swap(prevGray, gray);
 }
 
-void FeatureTracker::setSlices(int n) {
-    slices = n;
-}
-
-void FeatureTracker::computeSlice(cv::Mat& slice) {
-    slice.copyTo(image);
-    cvtColor(image, gray, COLOR_BGR2GRAY);  
-    if( needToInit )
+void FeatureTracker::computeSlice(cv::Mat& prev_slice, cv::Mat& slice, int slice_idx) {
+        
+    if(needToInit[slice_idx])
     {
-	// automatic initialization
-	goodFeaturesToTrack(gray, points[1], max_count, 0.01, 10, Mat(), 3, 0, 0.04);
-	cornerSubPix(gray, points[1], subPixWinSize, Size(-1,-1), termcrit);
+        goodFeaturesToTrack(slice, points[slice_idx], max_count, 0.01, 10, Mat(), 3, 0, 0.04);
+	cornerSubPix(slice, points[slice_idx], subPixWinSize, Size(-1,-1), termcrit);
+
+        /*
+        for(int i = 0; i < points[slice_idx].size(); i++ )
+	{
+	    circle( image, points[slice_idx][i], 3, Scalar(0,255,0), -1, 8);
+	}
+	imshow("puntolini", image);
+        waitKey(0);
+        */
     }
-    else if( !points[0].empty() )
+    else if( !prev_points[slice_idx].empty() )
     {
 	vector<uchar> status;
 	vector<float> err;
-	if(prevGray.empty()) {
-	    gray.copyTo(prevGray);
-	}
-	calcOpticalFlowPyrLK(prevGray, gray, points[0], points[1],
+	
+	calcOpticalFlowPyrLK(prev_slice, slice, prev_points[slice_idx], points[slice_idx],
 	                     status, err, winSize,
 	                     3, termcrit, 0, 0.001);
 	size_t i, k;
-	for( i = k = 0; i < points[1].size(); i++ )
+	for( i = k = 0; i < points[slice_idx].size(); i++ )
 	{
 	    if( !status[i] )
 	        continue;
 
-	    points[1][k++] = points[1][i];
-	    circle( image, points[1][i], 3, Scalar(0,255,0), -1, 8);
+	    points[slice_idx][k++] = points[slice_idx][i];
+	    circle(image,
+                   Point(points[slice_idx][i].x + (slice_idx*slice.cols),
+                         points[slice_idx][i].y), 
+                   3, Scalar(0,255,0), -1, 8);
 	}
-	points[1].resize(k);
+	points[slice_idx].resize(k);
     }
-
 	
-    if(points[1].size() < 10) {
-	needToInit = true;
+    if(points[slice_idx].size() < 3) {
+	needToInit[slice_idx] = true;
     }
     else {
-	needToInit = false;
+	needToInit[slice_idx] = false;
     }
     imshow("LK Demo", image);
 
     //image.copyTo(frame);
 	
-    std::swap(points[1], points[0]);
-    cv::swap(prevGray, gray);
+    std::swap(points[slice_idx], prev_points[slice_idx]);
+    
 }
 

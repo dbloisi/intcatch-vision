@@ -285,12 +285,7 @@ void SkyWaterDetector::off_line() {
         cout << "input images will be UNDISTORTED" << endl;
         readCalibData(calib_file);
     }
-
-
-    
-    ft.setSlices(8);
-
-    
+  
     bool run = true;
     while (run)
     {

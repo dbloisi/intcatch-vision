@@ -37,12 +37,13 @@ private:
     Size subPixWinSize;
     Size winSize;
     int max_count;
-    bool needToInit;
+    vector<bool> needToInit;
 
     Mat gray, prevGray, image;
-    vector<Point2f> points[2];
-    vector<StationaryPoint> history;
-    Point2f point;
+    vector< vector<Point2f> > prev_points;
+    vector< vector<Point2f> > points;
+    vector< vector<StationaryPoint> > history;
+    //Point2f point;
 
     int slices;
 
@@ -52,10 +53,9 @@ public:
                    Size subPixWinSize,
                    Size winSize,
                    int max_count,
-                   bool needToInit);
+                   int slices);
     void process(cv::Mat& frame);
-    void setSlices(int n);
 private:
-    void computeSlice(cv::Mat& slice);
+    void computeSlice(cv::Mat& prev_slice, cv::Mat& slice, int slide_idx);
 };
 
