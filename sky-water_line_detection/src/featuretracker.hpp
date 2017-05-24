@@ -42,10 +42,17 @@ private:
     Mat gray, prevGray, image;
     vector< vector<Point2f> > prev_points;
     vector< vector<Point2f> > points;
+
+    vector< vector<Point2f> > hist_prev_points;
+    vector< vector<Point2f> > hist_points;
+
     vector< vector<StationaryPoint> > history;
     //Point2f point;
 
     int slices;
+
+    int init_counter;
+    const int INIT_FRAMES = 60;
 
 public:
     FeatureTracker();
@@ -58,4 +65,3 @@ public:
 private:
     void computeSlice(cv::Mat& prev_slice, cv::Mat& slice, int slide_idx);
 };
-

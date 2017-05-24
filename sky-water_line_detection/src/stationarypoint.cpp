@@ -20,3 +20,11 @@ StationaryPoint::StationaryPoint(Point2f point, int history)
     this->point = point;
     this->history = history;
 }
+
+Point2f StationaryPoint::getPoint() {
+    return point;
+}
+
+int StationaryPoint::getHistory() {
+    return history;
+}

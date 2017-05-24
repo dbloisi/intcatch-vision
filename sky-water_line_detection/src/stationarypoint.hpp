@@ -15,5 +15,6 @@ private:
     int history;
 public:
     StationaryPoint(Point2f point, int history);
+    Point2f getPoint();
+    int getHistory();
 };
-

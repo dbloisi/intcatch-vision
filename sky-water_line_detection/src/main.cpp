@@ -4,7 +4,7 @@
  *
  * Author: Domenico Daniele Bloisi
  * email: domenico.bloisi@gmail.com
- * 
+ *
  * This file is part of a program for detecting the sky-water line
  * in images from a camera mounted on a small surface autonomous vessel
  *
@@ -38,10 +38,10 @@ int main(int argc, char* argv[])
     bool dir_set = false;
 
     bool out_set = false;
-    bool is_gui = false;
+    bool is_gui = true;
     bool is_live = false;
     float alpha = 0.2f;
-	
+
     string cap_file = "";
     string outvideo_filename = "";
 
@@ -50,7 +50,7 @@ int main(int argc, char* argv[])
     int max_frames = 1000;
 
     string calib_file = "";
-	
+
     //print help information
     help();
 
@@ -60,7 +60,7 @@ int main(int argc, char* argv[])
         cerr <<"exiting..." << endl;
         return EXIT_FAILURE;
     }
-    
+
     for (int i = 1; i < argc; ++i) {
         if(strcmp(argv[i], "-in") == 0) {
             cap_file.assign(argv[++i]);
@@ -73,8 +73,8 @@ int main(int argc, char* argv[])
         else if(strcmp(argv[i], "-live") == 0) {
             is_live = true;
         }
-        else if(strcmp(argv[i], "-gui") == 0) {
-            is_gui = true;
+        else if(strcmp(argv[i], "-nogui") == 0) {
+            is_gui = false;
         }
         else if(strcmp(argv[i], "-n") == 0) {
             istringstream iss(argv[++i]);
@@ -94,7 +94,7 @@ int main(int argc, char* argv[])
             return EXIT_FAILURE;
         }
     }
-	
+
     if(!(in_set || dir_set)) {
         //error in reading input parameters
         cerr <<"Please, check the input parameters." << endl;
@@ -109,7 +109,7 @@ int main(int argc, char* argv[])
         SkyWaterDetector swd(cap_file, alpha, outvideo_filename, max_frames, is_live, is_gui, calib_file);
         swd.detect();
     }
-    
+
     return EXIT_SUCCESS;
 }
 
@@ -136,13 +136,13 @@ void help()
 /**
 * @function processClips
 */
-void processClips(string dir, float alpha, string outvideo_filename) {	
+void processClips(string dir, float alpha, string outvideo_filename) {
 
     VideoManager *vm = new VideoManager(dir);
 
     //read the video file in the directory
     string s = vm->next(1);
-        
+
     string prev_s = s;
 
     cout << "processing video file: " << s << endl;
@@ -152,10 +152,10 @@ void processClips(string dir, float alpha, string outvideo_filename) {
 
     bool run = true;
     while(run) {
-        
+
         //read next video
         s = vm->next(1);
-        
+
         if(s.compare(prev_s) == 0) {
             run = false;
         }
@@ -164,7 +164,6 @@ void processClips(string dir, float alpha, string outvideo_filename) {
             cout << "clip: " << s << endl;
             SkyWaterDetector swd(s, alpha, outvideo_filename, -1, false, true, "");
             swd.detect();
-        }    
-    }	
+        }
+    }
 }
-
