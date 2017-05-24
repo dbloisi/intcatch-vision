@@ -17,7 +17,7 @@ FeatureTracker::FeatureTracker()
     winSize.width = 31;
     winSize.height = 31;
     max_count = 500;
-    slices = 4;
+    slices = 1;
     needToInit.resize(slices);
     for(int i = 0; i < slices; ++i) {
         needToInit[i] = true;
@@ -155,7 +155,9 @@ void FeatureTracker::computeSlice(cv::Mat& prev_slice, cv::Mat& slice, int slice
 	      }
 	      hist_points[slice_idx].resize(k);
 
-        if(history[slice_idx].empty()) {
+        //if(history[slice_idx].empty()) {
+        if(history[slice_idx].size() < 20) {
+
           for( int i = 0; i < hist_points[slice_idx].size(); i++ )
           {
               StationaryPoint sp(hist_points[slice_idx][i], 1);
@@ -163,13 +165,17 @@ void FeatureTracker::computeSlice(cv::Mat& prev_slice, cv::Mat& slice, int slice
           }
         }
         else {
+
+          waitKey(0);
+
           for( int i = 0; i < history[slice_idx].size(); i++ )
           {
               StationaryPoint sp = history[slice_idx][i];
               Point2f p = sp.getPoint();
               int h = sp.getHistory();
               bool found = false;
-              for( int j = 0; j < hist_prev_points[slice_idx].size(); j++ )
+              int j = 0;
+              for( ; j < hist_prev_points[slice_idx].size(); j++ )
               {
 
                   if(p.x == hist_prev_points[slice_idx][j].x &&
@@ -179,17 +185,17 @@ void FeatureTracker::computeSlice(cv::Mat& prev_slice, cv::Mat& slice, int slice
                               Point(p.x + (slice_idx*slice.cols),
                                     p.y),
                               12, Scalar(255,0,0), -1, 8);
-
-                     }
+                        found = true;
+                        break;
+                  }
+              }
+              if(found) {
+                history[slice_idx][i].setPoint(hist_points[slice_idx][j]);
+                history[slice_idx][i].setHistory(++h);
               }
           }
 
         }
-
-
-
-
-
     }
 
     if(init_counter > INIT_FRAMES) {

@@ -16,5 +16,7 @@ private:
 public:
     StationaryPoint(Point2f point, int history);
     Point2f getPoint();
+    void setPoint(Point2f p);
     int getHistory();
+    void setHistory(int h);    
 };

@@ -52,7 +52,7 @@ private:
     int slices;
 
     int init_counter;
-    const int INIT_FRAMES = 60;
+    const int INIT_FRAMES = 30;
 
 public:
     FeatureTracker();

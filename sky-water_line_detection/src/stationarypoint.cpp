@@ -25,6 +25,14 @@ Point2f StationaryPoint::getPoint() {
     return point;
 }
 
+void StationaryPoint::setPoint(Point2f p) {
+    point = p;
+}
+
 int StationaryPoint::getHistory() {
     return history;
+}
+
+void StationaryPoint::setHistory(int h) {
+    history = h;
 }
