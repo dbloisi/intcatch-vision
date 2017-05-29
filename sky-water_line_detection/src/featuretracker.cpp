@@ -7,6 +7,8 @@
 
 #include "featuretracker.hpp"
 
+#define DEBUG
+
 FeatureTracker::FeatureTracker()
 {
     termcrit.type = TermCriteria::COUNT|TermCriteria::EPS;
@@ -156,20 +158,62 @@ void FeatureTracker::computeSlice(cv::Mat& prev_slice, cv::Mat& slice, int slice
 	      hist_points[slice_idx].resize(k);
 
         //if(history[slice_idx].empty()) {
-        if(history[slice_idx].size() < 20) {
+        //if(history[slice_idx].size() < 20) {
+
+        #ifdef DEBUG
+                  cout << "----------------hist  points---------------------" << endl;
+                  for( int i = 0; i < hist_points[slice_idx].size(); i++ )
+                  {
+
+                      Point2f p = hist_points[slice_idx][i];
+
+                      cout << p << endl;
+                  }
+                  cout << "----------------------------------------" << endl;
+        #endif
 
           for( int i = 0; i < hist_points[slice_idx].size(); i++ )
           {
               StationaryPoint sp(hist_points[slice_idx][i], 1);
               history[slice_idx].push_back(sp);
           }
-        }
-        else {
 
-          waitKey(0);
+        //}
+        //else {
+
+          //waitKey(0);
 
           for( int i = 0; i < history[slice_idx].size(); i++ )
           {
+              bool to_erase = false;
+              for( int n = 0; n < i; n++ )
+              {
+                  if(history[slice_idx][i].getPoint().x ==
+                     history[slice_idx][n].getPoint().x &&
+                     history[slice_idx][i].getPoint().y ==
+                     history[slice_idx][n].getPoint().y )
+                  {
+                      to_erase = true;
+                      break;
+                  }
+              }
+              for( int k = i+1; k < history[slice_idx].size(); k++ )
+              {
+                  if(history[slice_idx][i].getPoint().x ==
+                     history[slice_idx][k].getPoint().x &&
+                     history[slice_idx][i].getPoint().y ==
+                     history[slice_idx][k].getPoint().y )
+                  {
+                      to_erase = true;
+                      break;
+                  }
+              }
+
+              if(to_erase) {
+                history[slice_idx][i].setHit(false);
+                continue;
+              }
+
               StationaryPoint sp = history[slice_idx][i];
               Point2f p = sp.getPoint();
               int h = sp.getHistory();
@@ -177,14 +221,8 @@ void FeatureTracker::computeSlice(cv::Mat& prev_slice, cv::Mat& slice, int slice
               int j = 0;
               for( ; j < hist_prev_points[slice_idx].size(); j++ )
               {
-
                   if(p.x == hist_prev_points[slice_idx][j].x &&
                      p.y == hist_prev_points[slice_idx][j].y) {
-
-                       circle(image,
-                              Point(p.x + (slice_idx*slice.cols),
-                                    p.y),
-                              12, Scalar(255,0,0), -1, 8);
                         found = true;
                         break;
                   }
@@ -192,17 +230,79 @@ void FeatureTracker::computeSlice(cv::Mat& prev_slice, cv::Mat& slice, int slice
               if(found) {
                 history[slice_idx][i].setPoint(hist_points[slice_idx][j]);
                 history[slice_idx][i].setHistory(++h);
+                history[slice_idx][i].setHit(true);
+
+                //circle(image,
+                //     Point(history[slice_idx][i].getPoint().x + (slice_idx*slice.cols),
+                //             history[slice_idx][i].getPoint().y),
+                //     4, Scalar(0, 0, 0), 1, 8);
               }
           }
 
+#ifdef DEBUG
+          cout << "----------------history prima -------------------" << endl;
+          for( int i = 0; i < history[slice_idx].size(); i++ )
+          {
+              StationaryPoint sp = history[slice_idx][i];
+              Point2f p = sp.getPoint();
+              int h = sp.getHistory();
+              bool v = sp.getHit();
+
+              cout << p << " history: " << h << " hit: " << v << endl;
+          }
+          cout << "----------------------------------------" << endl;
+#endif
+
+        vector<StationaryPoint> temp_history;
+
+        for( int i = 0; i < history[slice_idx].size(); i++ )
+        {
+            if(history[slice_idx][i].getHit()) {
+              StationaryPoint sp = history[slice_idx][i];
+              sp.setHit(false);
+              temp_history.push_back(sp);
+            }
+        }
+        history[slice_idx].clear();
+        for( int i = 0; i < temp_history.size(); i++ )
+        {
+            history[slice_idx].push_back(temp_history[i]);
+            if(history[slice_idx][i].getHistory() > 100) {
+                circle(image,
+                   Point(history[slice_idx][i].getPoint().x + (slice_idx*slice.cols),
+                         history[slice_idx][i].getPoint().y),
+                   5, Scalar(255,255,255), 3, 8);
+            }
+            else if(history[slice_idx][i].getHistory() > 50) {
+                circle(image,
+                   Point(history[slice_idx][i].getPoint().x + (slice_idx*slice.cols),
+                         history[slice_idx][i].getPoint().y),
+                   5, Scalar(255,0,0), 3, 8);
+            }
         }
     }
+
+    #ifdef DEBUG
+              cout << "----------------history dopo------------------" << endl;
+              for( int i = 0; i < history[slice_idx].size(); i++ )
+              {
+                  StationaryPoint sp = history[slice_idx][i];
+                  Point2f p = sp.getPoint();
+                  int h = sp.getHistory();
+                  bool v = sp.getHit();
+
+                  cout << p << " history: " << h << " hit: " << v << endl;
+              }
+              cout << "----------------------------------------" << endl;
+              waitKey(0);
+    #endif
+
 
     if(init_counter > INIT_FRAMES) {
         needToInit[slice_idx] = true;
         init_counter = 0;
     }
-    else if(hist_points[slice_idx].size() < 20) {
+    else if(hist_points[slice_idx].size() < 10) {
         needToInit[slice_idx] = true;
         init_counter = 0;
     }

@@ -16,7 +16,7 @@ SkyWaterDetector::SkyWaterDetector(string cap_file,
                                    string calib_file)
 {
     out_frame_n = 0;
-   
+
     ready = false;
     processed = false;
     quit = false;
@@ -44,7 +44,7 @@ SkyWaterDetector::SkyWaterDetector(string cap_file,
     this->calib_file.assign(calib_file);
 
     cap = new VideoCapture(cap_file);
-    
+
     if (!cap->isOpened())  // if not success, exit program
     {
         cout << "Cannot open the video file " << cap_file << endl;
@@ -59,8 +59,8 @@ SkyWaterDetector::SkyWaterDetector(string cap_file,
     cout << "Frame size: " << dWidth << " x " << dHeight << endl;
 
     double dFPS = cap->get(CV_CAP_PROP_FPS);
-    
-    
+
+
     if(dFPS != dFPS || dFPS > 30) { //check for nan value
         dFPS = 25.;
     }
@@ -76,7 +76,7 @@ SkyWaterDetector::SkyWaterDetector(string cap_file,
 
         namedWindow("video", CV_WINDOW_AUTOSIZE);
 
-        namedWindow("Saturation", CV_WINDOW_AUTOSIZE);   
+        namedWindow("Saturation", CV_WINDOW_AUTOSIZE);
         char min_s_trackbarName[50];
         sprintf( min_s_trackbarName, "min S");
         createTrackbar( min_s_trackbarName, "Saturation", &min_saturation_slider, min_saturation_slider_max, on_min_s_trackbar, this );
@@ -85,7 +85,7 @@ SkyWaterDetector::SkyWaterDetector(string cap_file,
         sprintf( max_s_trackbarName, "max S");
         createTrackbar( max_s_trackbarName, "Saturation", &max_saturation_slider, max_saturation_slider_max, on_max_s_trackbar, this );
         on_max_s_trackbar(max_saturation_slider, this);
-        
+
         namedWindow("Brightness", CV_WINDOW_AUTOSIZE);
         char min_b_trackbarName[50];
         sprintf( min_b_trackbarName, "min B");
@@ -125,7 +125,7 @@ void SkyWaterDetector::acquisition() {
         std::unique_lock<std::mutex> lk(mu);
 	c_var.wait(lk, []{return ready;});
 
-	   
+
 		    bool bSuccess = true;
 		    //std::cout<<"grabbing a frame\n";
 		    bSuccess = cap->grab(); // grab a new frame from video
@@ -134,13 +134,13 @@ void SkyWaterDetector::acquisition() {
 		    {
 		        cout << "Cannot read a frame from video stream" << endl;
 		    }
-	   
-	    
+
+
 	    processed = true;
-	    
+
 	    lk.unlock();
 	    c_var.notify_one();
-        
+
         std:chrono::milliseconds ms(1);
         std::chrono::duration<double, std::milli> ms3 = ms;
         std::this_thread::sleep_for(ms3);
@@ -150,11 +150,11 @@ void SkyWaterDetector::acquisition() {
         }
     }
 #endif
-       
+
 }
 
 void SkyWaterDetector::on_line() {
-    
+
     cout << "LIVE ACQUISITION" << endl;
     VideoWriter _outputVideo;
 
@@ -165,7 +165,7 @@ void SkyWaterDetector::on_line() {
 
 
     if(out_set) {
-        
+
         _outputVideo.open(outvideo_filename,
                      CV_FOURCC('D','I','V','X'),
                      10,
@@ -176,26 +176,26 @@ void SkyWaterDetector::on_line() {
             cout  << "Could not open the output video for writing: " << outvideo_filename << endl;
             exit(EXIT_FAILURE);
         }
-        
-        cout << "OUTPUT DATA will be written to: " << outvideo_filename << endl;		
+
+        cout << "OUTPUT DATA will be written to: " << outvideo_filename << endl;
     }
 
 
     bool run = true;
-   
+
     while (run)
     {
         {
             std::lock_guard<std::mutex> lk(mu);
             ready = true;
-        }        
-   
+        }
+
         c_var.notify_one();
-        
+
         {
             std::unique_lock<std::mutex> lk(mu);
             c_var.wait(lk, []{return processed;});
-        }        
+        }
 
         cap->retrieve(frame);
         if (!frame.data)
@@ -203,7 +203,7 @@ void SkyWaterDetector::on_line() {
             cout << "Unable to read frame from input stream" << endl;
             break;
         }
-        		
+
         //get the frame number and write it on the current frame
         stringstream ss;
         rectangle(frame, cv::Point(10, 2), cv::Point(100,20),
@@ -219,7 +219,7 @@ void SkyWaterDetector::on_line() {
         if (out_set) {
             _outputVideo.write(frame);
         }
-        
+
         if (waitKey(30) == 27) //wait for 'esc' key press for 30ms. If 'esc' key is pressed, break loop
         {
             cout << "esc key is pressed by user" << endl;
@@ -238,7 +238,7 @@ void SkyWaterDetector::off_line() {
     cout << "OFF LINE ACQUISITION" << endl;
 
     VideoWriter _outputVideo;
-    
+
     Mat frame;
 
     cap->read(frame);
@@ -263,7 +263,7 @@ void SkyWaterDetector::off_line() {
         stringstream ss;
         ss << out_cnt;
         outvideo_filename.append("_"+ss.str()+".avi");
-        
+
         _outputVideo.open(outvideo_filename,
                      CV_FOURCC('D','I','V','X'),
                      25,
@@ -275,17 +275,17 @@ void SkyWaterDetector::off_line() {
             exit(EXIT_FAILURE);
         }
 
-        cout << "[OK]" << endl;        
+        cout << "[OK]" << endl;
         cout << "OUTPUT DATA will be written to: " << outvideo_filename << endl;
-        out_frame_n = 0; 
-        out_cnt++;		
+        out_frame_n = 0;
+        out_cnt++;
     }
 
     if(!calib_file.empty()) {
         cout << "input images will be UNDISTORTED" << endl;
         readCalibData(calib_file);
     }
-  
+
     bool run = true;
     while (run)
     {
@@ -305,10 +305,14 @@ void SkyWaterDetector::off_line() {
         in_frame_n++;
 
         //Mat mask = colorAnalysis(frame);
-            
+
+        Mat r_frame(240,320,CV_8UC3);
+        resize(frame, r_frame, r_frame.size());
+        frame = r_frame.clone();
+
         ft.process(frame);
 
-  
+
 
         if(is_gui) {
             //get the frame number and write it on the current frame
@@ -319,20 +323,20 @@ void SkyWaterDetector::off_line() {
             string frameNumberString = ss.str();
             putText(frame, frameNumberString.c_str(), cv::Point(15, 15),
                 FONT_HERSHEY_SIMPLEX, 0.5 , cv::Scalar(0,0,0));
-        
-            imshow("video", frame); 
+
+            imshow("video", frame);
         }
         else {
             cout << ".";
             cout.flush();
         }
-        
-        
+
+
         if (out_set) {
             _outputVideo.write(frame);
 
-            out_frame_n++; 
-        
+            out_frame_n++;
+
             cout << "*";
             cout.flush();
 
@@ -344,7 +348,7 @@ void SkyWaterDetector::off_line() {
                 stringstream ss;
                 ss << out_cnt;
                 outvideo_filename.append("_"+ss.str()+".avi");
-        
+
                 _outputVideo.open(outvideo_filename,
                      CV_FOURCC('D','I','V','X'),
                      25,
@@ -356,13 +360,13 @@ void SkyWaterDetector::off_line() {
                     exit(EXIT_FAILURE);
                 }
 
-                cout << "[OK]" << endl;        
+                cout << "[OK]" << endl;
                 cout << "OUTPUT DATA will be written to: " << outvideo_filename << endl;
-                out_frame_n = 0; 
+                out_frame_n = 0;
                 out_cnt++;
             }
         }
-        
+
         if (is_gui && waitKey(30) == 27) //wait for 'esc' key press for 30ms. If 'esc' key is pressed, break loop
         {
             cout << "esc key is pressed by user" << endl;
@@ -370,8 +374,8 @@ void SkyWaterDetector::off_line() {
             run = false;
         }
 
-        
-        
+
+
 
     }
 
@@ -389,7 +393,7 @@ void SkyWaterDetector::on_min_s_trackbar(int value, void* userdata)
 
 void SkyWaterDetector::on_min_s_trackbar(int value) {
     min_saturation = min_saturation_slider;
-} 
+}
 
 /**
  * @function on_max_s_trackbar
@@ -403,7 +407,7 @@ void SkyWaterDetector::on_max_s_trackbar(int value, void* userdata)
 
 void SkyWaterDetector::on_max_s_trackbar(int value) {
     max_saturation = max_saturation_slider;
-} 
+}
 
 /**
  * @function on_min_b_trackbar
@@ -431,7 +435,7 @@ void SkyWaterDetector::on_max_b_trackbar(int value, void* userdata)
 
 void SkyWaterDetector::on_max_b_trackbar(int value) {
     max_brightness = max_brightness_slider;
-} 
+}
 
 Mat SkyWaterDetector::computeMask(const Mat& frame, const Mat& I, const Mat& S) {
 
@@ -460,7 +464,7 @@ Mat SkyWaterDetector::computeMask(const Mat& frame, const Mat& I, const Mat& S) 
         }
     }
 
-    
+
 
 
     //find biggest area
@@ -507,7 +511,7 @@ void SkyWaterDetector::readCalibData(string calib_file)
 }
 
 Mat SkyWaterDetector::colorAnalysis(Mat &frame)
-{   
+{
     Mat I(frame.rows, frame.cols, CV_8UC1);
     Mat S(frame.rows, frame.cols, CV_8UC1);
 
@@ -527,13 +531,13 @@ Mat SkyWaterDetector::colorAnalysis(Mat &frame)
                                  std::min(frame.at<Vec3b>(i,j)[1], frame.at<Vec3b>(i,j)[2]))
                              / (float)b));
 
-            if(b >= min_brightness && b <= max_brightness) { 
+            if(b >= min_brightness && b <= max_brightness) {
                 I.at<uchar>(i,j) = b;
             }
             else {
                 I.at<uchar>(i,j) = 0;
             }
-            if(s >= min_saturation && s <= max_saturation) { 
+            if(s >= min_saturation && s <= max_saturation) {
                 S.at<uchar>(i,j) = (uchar)s;
             }
             else {
@@ -551,13 +555,12 @@ Mat SkyWaterDetector::colorAnalysis(Mat &frame)
     applyColorMap(H, cm_H, COLORMAP_HOT);
 
     Mat mask = computeMask(frame,I,S);
-    
+
     if(is_gui){
-        imshow("Brightness", cm_I); 
+        imshow("Brightness", cm_I);
         imshow("Saturation", cm_S);
-        
+
         imshow("mask", mask);
     }
     return mask;
 }
-

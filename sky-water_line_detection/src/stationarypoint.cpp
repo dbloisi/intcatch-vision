@@ -19,6 +19,7 @@ StationaryPoint::StationaryPoint(Point2f point, int history)
 {
     this->point = point;
     this->history = history;
+    this->hit = true;
 }
 
 Point2f StationaryPoint::getPoint() {
@@ -35,4 +36,12 @@ int StationaryPoint::getHistory() {
 
 void StationaryPoint::setHistory(int h) {
     history = h;
+}
+
+bool StationaryPoint::getHit() {
+    return hit;
+}
+
+void StationaryPoint::setHit(bool value) {
+    hit = value;
 }
