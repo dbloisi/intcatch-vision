@@ -19,5 +19,8 @@ for pixelwise water detection
 
 # Requirements:
 
+-> tkInter
+
 -> python 3.5
+
 -> OpenCv2
