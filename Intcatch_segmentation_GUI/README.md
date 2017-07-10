@@ -19,6 +19,8 @@ for pixelwise water detection
 
 # Requirements:
 
+-> skimage
+
 -> tkInter
 
 -> python 3.5
