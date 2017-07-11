@@ -18,7 +18,7 @@
 # -> Scroll for zoom doesn't work on windows (should be fixed, not tested)
 # 
 
-# In[132]:
+# In[2]:
 
 #!/usr/bin/env python
 from tkinter import *
@@ -36,7 +36,7 @@ import glob
 import os
 
 
-# In[133]:
+# In[11]:
 
 class SegmentationGUI(Frame):
 
@@ -137,6 +137,7 @@ class SegmentationGUI(Frame):
         
         #set the keybord and mouse events
         self.panelA.bind("<Button-1>", self.select_segment)
+        self.panelA.bind("<B1-Motion>", self.select_segment)
         # This is what enables using the mouse for move the image in the window
         self.panelA.bind("<ButtonPress-3>",self.move_start)
         self.panelA.bind("<B3-Motion>",self.move_move)
@@ -184,6 +185,14 @@ class SegmentationGUI(Frame):
             
             #set the keybord and mouse events
             self.panelB.bind("<B1-Motion>", self.draw)
+            self.panelB.bind("<ButtonPress-3>",self.move_start_adjust_mask)
+            self.panelB.bind("<B3-Motion>",self.move_move_adjust_mask)
+            
+        
+    def move_start_adjust_mask(self,event):
+        self.panelB.scan_mark(event.x, event.y)    
+    def move_move_adjust_mask(self,event):
+        self.panelB.scan_dragto(event.x, event.y, gain=1)
             
             
     def draw(self,event):
@@ -337,18 +346,19 @@ class SegmentationGUI(Frame):
             #true_y = panelA.canvasy(event.y)
             x=int(self.panelA.canvasx(event.x))#event.x
             y=int(self.panelA.canvasy(event.y))#event.y
-            #print(x,"-",y,"-",true_x,"-",true_y)
-            clicked_segment = self.segments[y,x]
-            if(self.mask_type_choice.get() == 1): color = np.float64([100,100,255])
-            if(self.mask_type_choice.get() == 2): color = np.float64([255,255,255])
-            if(self.mask_type_choice.get() == 3): color = np.float64([0,0,0])
-            self.mask[self.segments == clicked_segment] = color
-            imageOUT = cv2.bitwise_or(self.image,self.mask)
-            imageOUT = toimage(mark_boundaries(imageOUT, self.segments))
-            imageOUT = ImageTk.PhotoImage(imageOUT)
+            if(x>0 and x<self.width_original and y>0 and y<self.height_original):
+                #print(x,"-",y,"-",true_x,"-",true_y)
+                clicked_segment = self.segments[y,x]
+                if(self.mask_type_choice.get() == 1): color = np.float64([100,100,255])
+                if(self.mask_type_choice.get() == 2): color = np.float64([255,255,255])
+                if(self.mask_type_choice.get() == 3): color = np.float64([0,0,0])
+                self.mask[self.segments == clicked_segment] = color
+                imageOUT = cv2.bitwise_or(self.image,self.mask)
+                imageOUT = toimage(mark_boundaries(imageOUT, self.segments))
+                imageOUT = ImageTk.PhotoImage(imageOUT)
 
-            self.panelA.create_image(0, 0, image = imageOUT, anchor = NW)
-            self.panelA.image = imageOUT
+                self.panelA.create_image(0, 0, image = imageOUT, anchor = NW)
+                self.panelA.image = imageOUT
     
     
     
@@ -565,8 +575,9 @@ class SegmentationGUI(Frame):
 
             if f:
                 abs_path = os.path.abspath(f.name)
-                maskOUT=toimage(mask2saveWater)
-                maskOUT.save(abs_path)
+                cv2.imwrite(abs_path,mask2saveWater)
+                #maskOUT=toimage(mask2saveWater)
+                #maskOUT.save(abs_path)
 
     
 #The master of the GUI
